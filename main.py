@@ -2,9 +2,11 @@ from fastapi import FastAPI, HTTPException, status
 
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI()
+app.title = "Remesas admin"
+app.version = "0.1.0"
 
 # Definir una ruta de prueba para verificar que todo esté funcionando
-@app.get("/")
+@app.get("/", tags="Inicio")
 async def read_root():
     return {"message": "¡Bienvenido a FastAPI!"}
 
