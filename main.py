@@ -1,10 +1,20 @@
 from fastapi import FastAPI, HTTPException, status
 
+tags_metadata = [
+    {
+        "name": "users",
+        "description": "Operations with users. The **login** logic is also here.",
+    },
+    ]
+
 # Crear una instancia de la aplicación FastAPI
-app = FastAPI()
+app = FastAPI(openapi_tags=tags_metadata)
+app.title = "Remesas admin"
+app.version = "0.1.1"
+
 
 # Definir una ruta de prueba para verificar que todo esté funcionando
-@app.get("/")
+@app.get("/", tags=["users"])
 async def read_root():
     return {"message": "¡Bienvenido a FastAPI!"}
 
