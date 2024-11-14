@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from datetime import timedelta
-from modulos.auth import create_access_token, authenticate_user, get_current_user, Token, User, supabase, Login
+from modulos.auth import create_access_token, authenticate_user, Token, User, supabase, Login, get_token
 
 tags_metadata = [
     {
@@ -16,7 +16,7 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.3.0"
+app.version = "0.3.1"
 
 # Enddpoint de registro de usuario
 @app.post("/register", tags=["users"])
@@ -39,11 +39,12 @@ async def login(user: Login):
 
 # Endpoint protegido que requiere el token JWT
 @app.get("/protected")
-async def protected_route(current_user: str = Depends(get_current_user)):
+async def protected_route(current_user: str = Depends(get_token)):
     """Testing protected endpoint
     """
     
     return {"message": f"Hello, {current_user}"}
+
 
 """
 # Modelo de respuesta para endpoint

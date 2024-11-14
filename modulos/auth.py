@@ -1,7 +1,8 @@
 import jwt
 from datetime import datetime, timedelta
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status, Security
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel
 from supabase import Client, create_client
 from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, SUPABASE_URL, SUPABASE_API_KEY
@@ -9,8 +10,8 @@ from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, SUPABASE
 # Instancia Supabase
 supabase: Client = create_client(SUPABASE_URL,SUPABASE_API_KEY)
 
-# Dependencia de OAuth2
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+# Define the security scheme for API Key in the Authorization header
+api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 
 class User(BaseModel):
     email: str
@@ -51,19 +52,29 @@ def authenticate_user(email: str, password: str):
         return user
     return None
 
-
-# def get_current_user(token: str = Depends(oauth2_scheme)):
-def get_current_user(token: str):
+# Function to retrieve and validate the token
+def get_token(api_key: str = Security(api_key_header)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization token missing",
+        )
+    
+    # Separate the Bearer scheme and the token
     try:
+        scheme, token = api_key.split()
+        if scheme.lower() != "bearer":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization format")
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
         return email
-    except jwt.PyJWTError:
+    except Exception as e:
         raise credentials_exception
