@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from datetime import timedelta
 from modulos.auth import create_access_token, authenticate_user, Token, User, supabase, Login, get_token
+from passlib.hash import bcrypt
 
 tags_metadata = [
     {
@@ -8,7 +9,7 @@ tags_metadata = [
         "description": "Operations with users. The **login** logic is also here.",
     },
     {
-        "name": "Remesas groups",
+        "name": "groups",
         "description": "Operations with groups.",
     },
     ]
@@ -16,12 +17,12 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.3.1"
+app.version = "0.3.2"
 
 # Enddpoint de registro de usuario
 @app.post("/register", tags=["users"])
 async def register(user: User):
-    response = supabase.table('users').insert({"email": user.email, "password": user.password, "username": user.username}).execute()
+    response = supabase.table('users').insert({"email": user.email, "password": bcrypt.hash(user.password), "username": user.username}).execute()
     return {"message": "User created successfully"}
     # if response.status_code == 201:
     #     return {"message": "User created successfully"}
