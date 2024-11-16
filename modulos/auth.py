@@ -24,8 +24,10 @@ class Login(BaseModel):
 
 
 class Token(BaseModel):
-    access_token: str
-    token_type: str
+    sucess: bool
+    data: list
+    # access_token: str
+    # token_type: str
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -43,6 +45,13 @@ def get_user_from_db(email: str):
     response = supabase.table('users').select("*").eq('email', email).execute()
     if response.data:
         return response.data[0]
+    return None
+
+
+def get_user(email: str):
+    response = supabase.table('users').select("*").eq('email', email).execute()
+    if response.data:
+        return response.data
     return None
 
 
@@ -78,4 +87,4 @@ def get_token(api_key: str = Security(api_key_header)):
             raise credentials_exception
         return email
     except Exception as e:
-        raise credentials_exception
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization format")

@@ -1,6 +1,6 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends,status
 from datetime import timedelta
-from modulos.auth import create_access_token, authenticate_user, Token, User, supabase, Login, get_token
+from modulos.auth import create_access_token, authenticate_user, Token, User, supabase, Login, get_token, get_user
 from passlib.hash import bcrypt
 
 tags_metadata = [
@@ -22,11 +22,14 @@ app.version = "0.3.2"
 # Enddpoint de registro de usuario
 @app.post("/register", tags=["users"])
 async def register(user: User):
-    response = supabase.table('users').insert({"email": user.email, "password": bcrypt.hash(user.password), "username": user.username}).execute()
-    return {"message": "User created successfully"}
-    # if response.status_code == 201:
-    #     return {"message": "User created successfully"}
-    # raise HTTPException(status_code=400, detail="User already exists")
+    try:
+        response = supabase.table('users').insert({"email": user.email, "password": bcrypt.hash(user.password), "username": user.username}).execute()
+        return {"message": "User created successfully"}
+        # if response.status_code == 201:
+        #     return {"message": "User created successfully"}
+        # raise HTTPException(status_code=400, detail="User already exists")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail= f"Error in registration: {e.details}")
 
 # Endpoint de login
 @app.post("/login", response_model=Token, tags=["users"])
@@ -34,9 +37,20 @@ async def login(user: Login):
     db_user = authenticate_user(user.email, user.password)
     if not db_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     access_token_expires = timedelta(minutes=30)
     access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
-    return {"access_token": access_token, "token_type": "bearer"}
+    token = {"access_token": access_token, "token_type": "bearer"}
+
+    user_data = get_user(user.email)
+
+    response = Token(
+        sucess= True,
+        data= [token, user_data]
+    )
+
+    # return {"access_token": access_token, "token_type": "bearer"}
+    return response
 
 # Endpoint protegido que requiere el token JWT
 @app.get("/protected")
