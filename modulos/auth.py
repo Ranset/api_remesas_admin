@@ -23,11 +23,9 @@ class Login(BaseModel):
     password: str
 
 
-class Token(BaseModel):
+class ResponseContract(BaseModel):
     sucess: bool
     data: list
-    # access_token: str
-    # token_type: str
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
