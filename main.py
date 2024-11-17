@@ -43,7 +43,6 @@ async def login(user: Login):
     token = {"access_token": access_token, "token_type": "bearer"}
 
     user_data = get_user(user.email)
-    print(user_data)
     user_data = {
         "user_id": user_data[0]["id"], 
         "user_email": user_data[0]["email"], 
@@ -73,34 +72,6 @@ async def protected_route(current_user: str = Depends(get_token)):
 
 
 """
-# Modelo de respuesta para endpoint
-class GroupResponse(BaseModel):
-    group_id: int
-    group_name: str
-    group_description: str
-    
-# Definir una ruta de prueba para verificar que todo esté funcionando
-@app.get("/get-groups", tags=["groups"])
-async def get_all_groups():
-    response = (
-        supabase
-        .table("groups")
-        .select("name","id","description")
-        .execute()
-    )
-
-    result = []
-    for record in response.data:
-        result.append(GroupResponse(
-            group_id = record["id"],
-            group_name = record["name"],
-            group_description= record["description"]
-        ))
-    return result
-
-
-
-
 # Ruta de ejemplo con un parámetro de consulta
 # @app.get("/items/{item_id}")
 # async def read_item(item_id: int, q: str = None):
