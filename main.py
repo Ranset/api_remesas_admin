@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends,status
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
 from passlib.hash import bcrypt
 from modulos.auth import create_access_token, authenticate_user, ResponseContract, User, Login, get_token, get_user
@@ -19,6 +20,19 @@ tags_metadata = [
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
 app.version = "0.3.2"
+
+# Middleware implementation for CORS mannager
+origins = [
+    "http://localhost:8100"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    )
 
 # Enddpoint de registro de usuario
 @app.post("/register", tags=["users"])
