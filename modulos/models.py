@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import TIMESTAMP
 
 Base = declarative_base()
 
-class User(Base):
+class Users(Base):
     __tablename__ = 'users'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -73,7 +73,7 @@ class UserRole(Base):
     # __table_args__ = (UniqueConstraint('user_id', 'group_id', name='_user_group_uc'),)
 
 # Conections methods
-from config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
+from .config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
 
 # Create URL connection for SQLAlchemy
 DATABASE_URL = f"postgresql://{SUPABASE_USER}:{SUPABASE_PASSWORD}@{DB_URL}/{SUPABASE_DB_NAME}"
@@ -89,7 +89,7 @@ def prueba_conexion ():
     # Consultar datos usando modelos
     try:
         # Consultar todos los productos
-        users = session.query(User).all()
+        users = session.query(Users).all()
         for user in users:
             print(f"ID: {user.id}, Nombre: {user.username}, email: {user.email}")
     except Exception as e:
@@ -99,4 +99,6 @@ def prueba_conexion ():
         session.close()
 
 if __name__ == "__main__":
-    prueba_conexion()
+    # prueba_conexion()
+    response = session.query(Users).filter_by(email = "yo@yo.com").first()
+    print(response.email)

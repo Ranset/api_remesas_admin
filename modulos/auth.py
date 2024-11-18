@@ -3,12 +3,9 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException, status, Security
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel
-from supabase import Client, create_client
-from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, SUPABASE_URL, SUPABASE_API_KEY
 from passlib.hash import bcrypt
-
-# Instancia Supabase
-supabase: Client = create_client(SUPABASE_URL,SUPABASE_API_KEY)
+from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from .models import session, Users
 
 # Define the security scheme for API Key in the Authorization header
 api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
@@ -39,24 +36,17 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 
-def get_user_from_db(email: str):
-    response = supabase.table('users').select("*").eq('email', email).execute()
-    if response.data:
-        return response.data[0]
-    return None
-
-
 def get_user(email: str):
-    response = supabase.table('users').select("*").eq('email', email).execute()
-    if response.data:
-        return response.data
+    response = session.query(Users).filter_by(email = email).first()
+    if response:
+        return response
     return None
 
 
 def authenticate_user(email: str, password: str):
-    user = get_user_from_db(email)
+    user = get_user(email)
     if user:
-        if bcrypt.verify(password, user['password']):
+        if bcrypt.verify(password, user.password):
             return user
     return None
 
