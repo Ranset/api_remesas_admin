@@ -22,7 +22,7 @@ class Login(BaseModel):
 
 class ResponseContract(BaseModel):
     sucess: bool
-    data: list
+    data: dict
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -37,10 +37,21 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 
 
 def get_user(email: str):
-    response = session.query(Users).filter_by(email = email).first()
-    if response:
-        return response
-    return None
+    try:
+        response = session.query(Users).filter_by(email = email).first()
+        if response:
+            return response
+        return None
+    except Exception as e:
+        session.rollback()
+        return ResponseContract(
+            sucess= False,
+            data= {
+                'error': str(e.__cause__)
+            }
+        )
+    finally:
+        session.close()
 
 
 def authenticate_user(email: str, password: str):
@@ -49,6 +60,7 @@ def authenticate_user(email: str, password: str):
         if bcrypt.verify(password, user.password):
             return user
     return None
+
 
 # Function to retrieve and validate the token
 def get_token(api_key: str = Security(api_key_header)):

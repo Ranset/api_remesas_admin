@@ -19,11 +19,12 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.3.2"
+app.version = "0.3.3"
 
 # Middleware implementation for CORS mannager
 origins = [
-    "http://localhost:8100"
+    "http://localhost:8100",
+    "https://cszk6rnz-8100.usw3.devtunnels.ms"
 ]
 
 app.add_middleware(
@@ -41,10 +42,28 @@ async def register(user: User):
         new_user = Users(email= user.email, password= bcrypt.hash(user.password), username= user.username)
         session.add(new_user)
         session.commit()
-        return {"message": "User created successfully"}
+        user_data = get_user(user.email)
+        user_data = {
+            "id": user_data.id, 
+            "email": user_data.email, 
+            "username": user_data.username,
+            "is_active": user_data.is_active,
+            "updated_at": user_data.updated_at,
+            }
+        return ResponseContract(
+            sucess= True,
+            data= {
+                'user': user_data
+            }
+        )
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail= f"Error in registration: {e.__cause__}")
+        return ResponseContract(
+            sucess= False,
+            data= {
+                'error': str(e.__cause__)
+            }
+        )
     finally:
         session.close()
 
@@ -60,22 +79,24 @@ async def login(user: Login):
     token = {"access_token": access_token, "token_type": "bearer"}
 
     user_data = get_user(user.email)
-    print(user_data)
     user_data = {
-        "user_id": user_data.id, 
-        "user_email": user_data.email, 
+        "id": user_data.id, 
+        "email": user_data.email, 
         "username": user_data.username,
-        "user_phone": user_data.phone_number, 
+        "phone": user_data.phone_number, 
         "first_name": user_data.first_name, 
         "last_name": user_data.last_name,
-        "user_avatar": user_data.avatar, 
+        "avatar": user_data.avatar, 
         "is_active": user_data.is_active,
-        "user_updated_at": user_data.updated_at,
+        "updated_at": user_data.updated_at,
         }
 
     response = ResponseContract(
         sucess= True,
-        data= [token, user_data]
+        data= {
+            'session': token, 
+            'user': user_data
+            }
     )
 
     return response
@@ -86,7 +107,12 @@ async def protected_route(current_user: str = Depends(get_token)):
     """Testing protected endpoint
     """
     
-    return ResponseContract(sucess= True, data= [{"message": f"Hello, {current_user}"}])
+    return ResponseContract(
+        sucess= True,
+        data= {
+            "message": f"Hello, {current_user}"
+            }
+        )
 
 
 """
