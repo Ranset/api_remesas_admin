@@ -2,27 +2,12 @@ import jwt
 from datetime import datetime, timedelta
 from fastapi import HTTPException, status, Security
 from fastapi.security.api_key import APIKeyHeader
-from pydantic import BaseModel
 from passlib.hash import bcrypt
 from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
-from .models import session, Users
+from .models import session, Users, ResponseContract
 
 # Define the security scheme for API Key in the Authorization header
 api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
-
-class User(BaseModel):
-    email: str
-    password: str
-    username: str
-
-class Login(BaseModel):
-    email: str
-    password: str
-
-
-class ResponseContract(BaseModel):
-    sucess: bool
-    data: dict
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
