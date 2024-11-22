@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, Column, ForeignKey, Integer, String, Boole
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from pydantic import BaseModel
+from typing import Optional
 
 # Pydantic
 class User(BaseModel):
@@ -10,10 +11,10 @@ class User(BaseModel):
     username: str
 
 class UserUpdate(BaseModel):
-    avatar: str = None
-    phone_number: str = None
-    first_name: str = None
-    last_name: str = None
+    avatar: Optional[str] = None
+    phone_number: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 class Login(BaseModel):
     email: str

@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends,status
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
 from passlib.hash import bcrypt
-from modulos.auth import create_access_token, authenticate_user, get_token, get_user
+from modulos.auth import create_access_token, authenticate_user, get_token, get_user, get_user_data
 from modulos.models import session, Users, delete_user, update_user, ResponseContract, User, UserUpdate, Login
 
 tags_metadata = [
@@ -23,7 +23,7 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.4.3"
+app.version = "0.4.4"
 
 # Middleware implementation for CORS mannager
 origins = [
@@ -85,18 +85,7 @@ async def login(user: Login):
     access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
     token = {"access_token": access_token, "token_type": "bearer"}
 
-    user_data = get_user(user.email)
-    user_data = {
-        "id": user_data.id, 
-        "email": user_data.email, 
-        "username": user_data.username,
-        "phone": user_data.phone_number, 
-        "first_name": user_data.first_name, 
-        "last_name": user_data.last_name,
-        "avatar": user_data.avatar, 
-        "is_active": user_data.is_active,
-        "updated_at": user_data.updated_at,
-        }
+    user_data = get_user_data(user.email)
 
     response = ResponseContract(
         sucess= True,
@@ -110,20 +99,23 @@ async def login(user: Login):
 
 
 # Endpoint User data update
-@app.patch("/api/user/update/{user_id}", response_model= ResponseContract, tags= ["users"])
+@app.patch("/api/user/{user_id}", response_model= ResponseContract, tags= ["users"])
 async def user_update(user_id: int, user_patch: UserUpdate, current_user: str = Depends(get_token)):
     response = update_user(user_id, user_patch)
+
+    user_data = get_user_data(current_user)
 
     return ResponseContract(
         sucess= response[0],
         data= {
-            'message': response[1]
+            'message': response[1],
+            'user': user_data
         }
     )
 
 
 # Endpoint delete User
-@app.delete("/api/user/delete/{user_id}", response_model= ResponseContract, tags= ["users"])
+@app.delete("/api/user/{user_id}", response_model= ResponseContract, tags= ["users"])
 async def user_delete(user_id: int, current_user: str = Depends(get_token)):
     response = delete_user(user_id)
     return ResponseContract(

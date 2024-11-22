@@ -38,6 +38,22 @@ def get_user(email: str):
     finally:
         session.close()
 
+def get_user_data(email: str) -> dict:
+    user_data = get_user(email)
+    user_data = {
+        "id": user_data.id, 
+        "email": user_data.email, 
+        "username": user_data.username,
+        "phone": user_data.phone_number, 
+        "first_name": user_data.first_name, 
+        "last_name": user_data.last_name,
+        "avatar": user_data.avatar, 
+        "is_active": user_data.is_active,
+        "updated_at": user_data.updated_at,
+        }
+    
+    return user_data
+
 
 def authenticate_user(email: str, password: str):
     user = get_user(email)
