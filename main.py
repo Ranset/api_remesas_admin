@@ -1,14 +1,21 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends,status
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
-from modulos.auth import create_access_token, authenticate_user, get_current_user, Token, User, supabase, Login
+from passlib.hash import bcrypt
+from modulos.auth import create_access_token, authenticate_user, get_token, get_user, get_user_data
+from modulos.models import session, Users, delete_user, update_user, ResponseContract, User, UserUpdate, Login
 
 tags_metadata = [
     {
-        "name": "users",
-        "description": "Operations with users. The **login** logic is also here.",
+        "name": "auth",
+        "description": "The **login** logic is here.",
     },
     {
-        "name": "Remesas groups",
+        "name": "users",
+        "description": "Operations with users.",
+    },
+    {
+        "name": "groups",
         "description": "Operations with groups.",
     },
     ]
@@ -16,64 +23,124 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.3.0"
+app.version = "0.4.4"
+
+# Middleware implementation for CORS mannager
+origins = [
+    "http://localhost:8100",
+    "https://cszk6rnz-8100.usw3.devtunnels.ms", #tunnel tests
+    "http://127.0.0.1:5500" #local tests
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    )
+
 
 # Enddpoint de registro de usuario
-@app.post("/register", tags=["users"])
+@app.post("/api/auth/register", tags=["auth"])
 async def register(user: User):
-    response = supabase.table('users').insert({"email": user.email, "password": user.password, "username": user.username}).execute()
-    return {"message": "User created successfully"}
-    # if response.status_code == 201:
-    #     return {"message": "User created successfully"}
-    # raise HTTPException(status_code=400, detail="User already exists")
+    try:
+        new_user = Users(email= user.email, password= bcrypt.hash(user.password), username= user.username)
+        session.add(new_user)
+        session.commit()
+        user_data = get_user(user.email)
+        user_data = {
+            "id": user_data.id, 
+            "email": user_data.email, 
+            "username": user_data.username,
+            "is_active": user_data.is_active,
+            "updated_at": user_data.updated_at,
+            }
+        return ResponseContract(
+            sucess= True,
+            data= {
+                'user': user_data
+            }
+        )
+    except Exception as e:
+        session.rollback()
+        return ResponseContract(
+            sucess= False,
+            data= {
+                'error': str(e.__cause__)
+            }
+        )
+    finally:
+        session.close()
+
 
 # Endpoint de login
-@app.post("/login", response_model=Token, tags=["users"])
+@app.post("/api/auth/login", response_model=ResponseContract, tags=["auth"])
 async def login(user: Login):
     db_user = authenticate_user(user.email, user.password)
     if not db_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     access_token_expires = timedelta(minutes=30)
     access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
-    return {"access_token": access_token, "token_type": "bearer"}
+    token = {"access_token": access_token, "token_type": "bearer"}
+
+    user_data = get_user_data(user.email)
+
+    response = ResponseContract(
+        sucess= True,
+        data= {
+            'session': token, 
+            'user': user_data
+            }
+    )
+
+    return response
+
+
+# Endpoint User data update
+@app.patch("/api/user/{user_id}", response_model= ResponseContract, tags= ["users"])
+async def user_update(user_id: int, user_patch: UserUpdate, current_user: str = Depends(get_token)):
+    response = update_user(user_id, user_patch)
+
+    user_data = get_user_data(current_user)
+
+    return ResponseContract(
+        sucess= response[0],
+        data= {
+            'message': response[1],
+            'user': user_data
+        }
+    )
+
+
+# Endpoint delete User
+@app.delete("/api/user/{user_id}", response_model= ResponseContract, tags= ["users"])
+async def user_delete(user_id: int, current_user: str = Depends(get_token)):
+    response = delete_user(user_id)
+    return ResponseContract(
+        sucess= response[0],
+        data= {
+            'message': response[1] 
+        }
+    )
+
 
 # Endpoint protegido que requiere el token JWT
-@app.get("/protected")
-async def protected_route(current_user: str = Depends(get_current_user)):
+@app.get("/api/protected")
+async def protected_route(current_user: str = Depends(get_token)):
     """Testing protected endpoint
     """
     
-    return {"message": f"Hello, {current_user}"}
+    return ResponseContract(
+        sucess= True,
+        data= {
+            "message": f"Hello, {current_user}"
+            }
+        )
+
 
 """
-# Modelo de respuesta para endpoint
-class GroupResponse(BaseModel):
-    group_id: int
-    group_name: str
-    group_description: str
-    
-# Definir una ruta de prueba para verificar que todo esté funcionando
-@app.get("/get-groups", tags=["groups"])
-async def get_all_groups():
-    response = (
-        supabase
-        .table("groups")
-        .select("name","id","description")
-        .execute()
-    )
-
-    result = []
-    for record in response.data:
-        result.append(GroupResponse(
-            group_id = record["id"],
-            group_name = record["name"],
-            group_description= record["description"]
-        ))
-    return result
-
-
-
-
 # Ruta de ejemplo con un parámetro de consulta
 # @app.get("/items/{item_id}")
 # async def read_item(item_id: int, q: str = None):
