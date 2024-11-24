@@ -1,6 +1,31 @@
 from sqlalchemy import create_engine, Column, ForeignKey, Integer, String, Boolean, Text, DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.dialects.postgresql import TIMESTAMP
+from pydantic import BaseModel
+from typing import Optional
+
+# Pydantic
+class User(BaseModel):
+    email: str
+    password: str
+    username: str
+
+class UserUpdate(BaseModel):
+    avatar: Optional[str] = None
+    phone_number: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+class Login(BaseModel):
+    email: str
+    password: str
+
+class ResponseContract(BaseModel):
+    sucess: bool
+    data: dict
+
+# End Pydantic
+
 
 Base = declarative_base()
 
@@ -97,6 +122,47 @@ def prueba_conexion ():
     finally:
         # Cerrar la sesión
         session.close()
+
+
+def delete_user(user_id: int):
+    user_to_delete = session.query(Users).filter(Users.id == user_id).first()
+    print("El objeto:",user_to_delete)
+    message = []
+
+    if user_to_delete:
+        session.delete(user_to_delete)
+        session.commit()
+        message = [True, "User deleted successfully"]
+    else:
+        message = [False, "User not found"]
+
+    session.close()
+    return message
+
+
+def update_user(user_id: int, user_patch: UserUpdate):
+    message = []
+
+    user = session.query(Users).filter(Users.id == user_id).first()
+
+    if not user:
+        message = [False, "User not found"]
+        session.close()
+        return message
+
+    #update user fields
+    update_data = user_patch.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(user, key, value)
+
+    session.commit()
+    session.refresh(user)
+    session.close()
+
+    message = [True, "User data updated successfully"]
+
+    return message
+
 
 if __name__ == "__main__":
     # prueba_conexion()

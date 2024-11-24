@@ -2,27 +2,12 @@ import jwt
 from datetime import datetime, timedelta
 from fastapi import HTTPException, status, Security
 from fastapi.security.api_key import APIKeyHeader
-from pydantic import BaseModel
 from passlib.hash import bcrypt
 from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
-from .models import session, Users
+from .models import session, Users, ResponseContract
 
 # Define the security scheme for API Key in the Authorization header
 api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
-
-class User(BaseModel):
-    email: str
-    password: str
-    username: str
-
-class Login(BaseModel):
-    email: str
-    password: str
-
-
-class ResponseContract(BaseModel):
-    sucess: bool
-    data: list
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -37,10 +22,37 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 
 
 def get_user(email: str):
-    response = session.query(Users).filter_by(email = email).first()
-    if response:
-        return response
-    return None
+    try:
+        response = session.query(Users).filter_by(email = email).first()
+        if response:
+            return response
+        return None
+    except Exception as e:
+        session.rollback()
+        return ResponseContract(
+            sucess= False,
+            data= {
+                'error': str(e.__cause__)
+            }
+        )
+    finally:
+        session.close()
+
+def get_user_data(email: str) -> dict:
+    user_data = get_user(email)
+    user_data = {
+        "id": user_data.id, 
+        "email": user_data.email, 
+        "username": user_data.username,
+        "phone": user_data.phone_number, 
+        "first_name": user_data.first_name, 
+        "last_name": user_data.last_name,
+        "avatar": user_data.avatar, 
+        "is_active": user_data.is_active,
+        "updated_at": user_data.updated_at,
+        }
+    
+    return user_data
 
 
 def authenticate_user(email: str, password: str):
@@ -49,6 +61,7 @@ def authenticate_user(email: str, password: str):
         if bcrypt.verify(password, user.password):
             return user
     return None
+
 
 # Function to retrieve and validate the token
 def get_token(api_key: str = Security(api_key_header)):
