@@ -23,7 +23,7 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.4.5"
+app.version = "0.4.6"
 
 # Middleware implementation for CORS mannager
 origins = [
@@ -33,6 +33,8 @@ origins = [
     "capacitor://localhost", # Para apps Ionic con Capacitor
     "ionic://localhost",     # Para apps con Ionic
 ]
+
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
