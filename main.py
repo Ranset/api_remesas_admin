@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
 from passlib.hash import bcrypt
 from modulos.auth import create_access_token, authenticate_user, get_token, get_user, get_user_data
-from modulos.models import session, Users, delete_user, update_user, ResponseContract, User, UserUpdate, Login
+from modulos.models import session, Users, delete_user, update_user, create_group, ResponseContract, User, UserUpdate, Login, CreateGroup
 
 tags_metadata = [
     {
@@ -128,6 +128,37 @@ async def user_delete(user_id: int, current_user: str = Depends(get_token)):
             'message': response[1] 
         }
     )
+
+
+# Endpoint create group
+@app.post("/api/groups/", response_model=ResponseContract, tags=["groups"])
+async def create_group(new_group_data: CreateGroup, current_user: str = Depends(get_token)):
+    
+
+    return ResponseContract(
+        sucess= True,
+        data={
+            "message":"Grupo creado"
+        }
+    )
+
+
+# Endpoint list group
+@app.get("/api/groups/{user_id}", response_model=ResponseContract, tags=["groups"])
+async def get_user_groups(current_user: str = Depends(get_token)):
+    pass
+
+
+# Endpoint update group
+@app.put("/api/groups/", response_model=ResponseContract, tags=["groups"])
+async def update_group(current_user: str = Depends(get_token)):
+    pass
+
+
+# Endpoint delete group
+@app.delete("/api/groups/", response_model=ResponseContract, tags=["groups"])
+async def delete_group(current_user: str = Depends(get_token)):
+    pass
 
 
 # Endpoint protegido que requiere el token JWT

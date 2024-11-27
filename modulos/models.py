@@ -20,6 +20,17 @@ class Login(BaseModel):
     email: str
     password: str
 
+class UserGroupRole(BaseModel):
+    user_id: int
+    role_id: int
+
+class CreateGroup(BaseModel):
+    group_name: str
+    group_description: str
+    group_color: str
+    group_users: list[UserGroupRole]
+
+
 class ResponseContract(BaseModel):
     sucess: bool
     data: dict
@@ -162,6 +173,11 @@ def update_user(user_id: int, user_patch: UserUpdate):
     message = [True, "User data updated successfully"]
 
     return message
+
+
+def create_group(group_data: CreateGroup):
+    new_group_data = group_data.dict(exclude_unset=True)
+    return new_group_data["group_name"]
 
 
 if __name__ == "__main__":
