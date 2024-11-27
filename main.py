@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
 from passlib.hash import bcrypt
 from modulos.auth import create_access_token, authenticate_user, get_token, get_user, get_user_data
-from modulos.models import session, Users, delete_user, update_user, create_group, ResponseContract, User, UserUpdate, Login, CreateGroup
+from modulos.models import session, Users, Group, delete_user, update_user, create_group, ResponseContract, User, UserUpdate, Login, CreateGroup
 
 tags_metadata = [
     {
@@ -134,11 +134,24 @@ async def user_delete(user_id: int, current_user: str = Depends(get_token)):
 @app.post("/api/groups/", response_model=ResponseContract, tags=["groups"])
 async def create_group(new_group_data: CreateGroup, current_user: str = Depends(get_token)):
     
+    try:
+        # Create new group
+        db_group = Group(name= new_group_data.group_name, description= new_group_data.group_description, color= new_group_data.group_color)
+        session.add(db_group)
+        session.commit()
+        session.refresh(db_group)
+        session.close()
+
+        # Asing users to group
+        
+    except:
+        session.rollback()
+        raise HTTPException(status_code=500, detail="error in data base")
 
     return ResponseContract(
         sucess= True,
         data={
-            "message":"Grupo creado"
+            "message": db_group.id
         }
     )
 
