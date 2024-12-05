@@ -3,7 +3,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
 from passlib.hash import bcrypt
 from modulos.auth import create_access_token, authenticate_user, get_token, get_user, get_user_data
-from modulos.models import session, Users, Group, delete_user, update_user, create_group, ResponseContract, User, UserRole, UserUpdate, Login, CreateGroup, Role
+from modulos.models import (session, 
+                            Users, 
+                            Group, 
+                            delete_user, 
+                            delete_group, 
+                            update_user, 
+                            group_creation,
+                            get_group_details,
+                            group_update,
+                            user_group_list,
+                            users_roles,
+                            user_by_nickname,
+                            ResponseContract, 
+                            User, 
+                            UserRole, 
+                            UserUpdate, 
+                            Login, 
+                            CreateGroup,
+                            UpdateGroup,
+                            Role
+                            )
 
 tags_metadata = [
     {
@@ -23,7 +43,7 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.4.6"
+app.version = "0.5.0"
 
 # Middleware implementation for CORS mannager
 origins = [
@@ -130,83 +150,102 @@ async def user_delete(user_id: int, current_user: str = Depends(get_token)):
     )
 
 
-# Endpoint create group
-@app.post("/api/groups/", response_model=ResponseContract, tags=["groups"])
-async def create_group(new_group_data: CreateGroup, current_user: str = Depends(get_token)):
-    
-    try:
-        # Create new group
-        db_group = Group(name= new_group_data.group_name, description= new_group_data.group_description, color= new_group_data.group_color)
-        session.add(db_group)
-        session.commit()
-        session.refresh(db_group)
-        session.close()
-    
-        # Asing users to group
-        for user in new_group_data.group_users:
-            db_roles = UserRole(user_id= user.user_id, group_id= db_group.id, role_id= user.role_id)
-            session.add(db_roles)
-
-        session.commit()
-        session.close()
-        
-    except:
-        session.rollback()
-        raise HTTPException(status_code=500, detail="error inserting")
+# Endpoint obtain user data by nickname
+@app.get("/api/user/{nickname}", response_model= ResponseContract, tags= ["users"])
+async def get_user_by_nickname(nickname: str, current_user: str = Depends(get_token)):
+    response = user_by_nickname(nickname)
 
     return ResponseContract(
-        sucess= True,
-        data={
-            "message": db_group.id
+        sucess= response[0],
+        data= {
+            'user': response[1] 
         }
     )
 
 
-# Endpoint list group
+# Endpoint obtain all roles
+@app.get("/api/user/roles/", response_model= ResponseContract, tags= ["users"])
+async def get_users_roles(current_user: str = Depends(get_token)):
+    response = users_roles()
+
+    return ResponseContract(
+        sucess= response[0],
+        data= {
+            'roles': response[1] 
+        }
+    )
+
+
+# Endpoint create group
+@app.post("/api/groups/", response_model=ResponseContract, tags=["groups"])
+async def create_group(new_group_data: CreateGroup, current_user: str = Depends(get_token)):
+    
+    response = group_creation(new_group_data)
+
+    return ResponseContract(
+        sucess= response[0],
+        data={
+            "message": response[1],
+            "group": response[2]
+        }
+    )
+
+
+# Endpoint get group details
+@app.get("/api/groups/{group_id}", response_model=ResponseContract, tags=["groups"])
+async def get_group(group_id: int, current_user: str = Depends(get_token)):
+    """Get group object
+    """
+
+    response = get_group_details(group_id)
+
+    return ResponseContract(
+        sucess= response[0],
+        data= {
+            "group": response[1]
+        }
+    )
+
+
+# Endpoint list user groups
 @app.get("/api/groups/{user_id}", response_model=ResponseContract, tags=["groups"])
 async def get_user_groups(user_id: int, current_user: str = Depends(get_token)):
     """Gets the groups a user belongs to
     """
 
-    query = (
-        session.query(
-            Group.id.label("group_id"),
-            Group.name.label("group_name"),
-            Role.name.label("user_role")
-        )
-        .join(UserRole, Group.id == UserRole.group_id)
-        .join(Role, UserRole.role_id == Role.id)
-        .filter(UserRole.user_id == user_id)
-    )
-
-    result = query.all()
-
-    groups_list = []
-
-    for group in result:
-        group_obj = {
-            "id": group[0],
-            "name": group[1],
-            "role": group[2]
-        }
-
-        groups_list.append(group_obj)
+    response = user_group_list(user_id)
 
     return ResponseContract(
-        sucess= True,
+        sucess= response[0],
         data= {
-            "groups": groups_list
+            "groups": response[1]
         }
     )
 
 
 # Endpoint update group
 @app.put("/api/groups/", response_model=ResponseContract, tags=["groups"])
-async def update_group(current_user: str = Depends(get_token)):
-    pass
+async def update_group(new_group_data: UpdateGroup, current_user: str = Depends(get_token)):
+    
+    response = group_update(new_group_data)
+
+    return ResponseContract(
+        sucess= response[0],
+        data={
+            "message": response[1],
+            "group": response[2]
+        }
+    )
 
 
 # Endpoint delete group
-@app.delete("/api/groups/", response_model=ResponseContract, tags=["groups"])
-async def delete_group(current_user: str = Depends(get_token)):
-    pass
+@app.delete("/api/groups/{group_id}", response_model= ResponseContract, tags=["groups"])
+async def group_delete(group_id: int, current_user: str = Depends(get_token)):
+    response = delete_group(group_id)
+
+    return ResponseContract(
+        sucess= response[0],
+        data= {
+            'message': response[1] 
+        }
+    )
