@@ -359,6 +359,7 @@ def user_group_list(user_id: int) -> list:
         session.query(
             Group.id.label("group_id"),
             Group.name.label("group_name"),
+            Group.color.label("group_color"),
             Role.name.label("user_role")
         )
         .join(UserRole, Group.id == UserRole.group_id)
@@ -374,7 +375,8 @@ def user_group_list(user_id: int) -> list:
         group_obj = {
             "id": group[0],
             "name": group[1],
-            "role": group[2]
+            "color": group[2],
+            "role": group[3]
         }
 
         groups_list.append(group_obj)
