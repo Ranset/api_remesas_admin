@@ -346,6 +346,7 @@ def user_group_list(user_id: int) -> list:
         session.query(
             Group.id.label("group_id"),
             Group.name.label("group_name"),
+            Group.description.label("group_desc"),
             Group.color.label("group_color"),
             Role.name.label("user_role")
         )
@@ -354,16 +355,47 @@ def user_group_list(user_id: int) -> list:
         .filter(UserRole.user_id == user_id)
     )
 
-    result = query.all()
+    group_result = query.all()
+    session.close()
 
     groups_list = []
 
-    for group in result:
+    for group in group_result:
+        query = text(f"""
+        SELECT u.id, u.username, u.email, u.first_name, u.last_name, r.id AS role_id, r.name AS role_name
+        FROM user_roles ur
+        JOIN users u ON ur.user_id = u.id
+        JOIN roles r ON ur.role_id = r.id
+        WHERE ur.group_id = {group[0]}
+        """)
+        results = session.execute(query, {"group_id": group[0]}).fetchall()
+        
+        group_users_list = []
+
+        for result in results:
+            user = result.tuple()
+
+            role_obj = {
+                "id": user[5],
+                "name": user[6]
+            }
+
+            user_obj ={
+                "id": user[0],
+                "username": user[1],
+                "first_name": user[3],
+                "last_name": user[4],
+                "role": role_obj
+            }
+            group_users_list.append(user_obj)
+
         group_obj = {
             "id": group[0],
             "name": group[1],
-            "color": group[2],
-            "role": group[3]
+            "description": group[2],
+            "color": group[3],
+            "users": group_users_list,
+            "orders": []
         }
 
         groups_list.append(group_obj)
