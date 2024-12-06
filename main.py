@@ -43,7 +43,7 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.5.1"
+app.version = "0.5.2"
 
 # Middleware implementation for CORS mannager
 origins = [
@@ -164,7 +164,7 @@ async def get_user_by_nickname(nickname: str, current_user: str = Depends(get_to
 
 
 # Endpoint obtain all roles
-@app.get("/api/user/roles/", response_model= ResponseContract, tags= ["users"])
+@app.get("/api/user/roles/getall", response_model= ResponseContract, tags= ["users"])
 async def get_users_roles(current_user: str = Depends(get_token)):
     response = users_roles()
 
@@ -177,7 +177,7 @@ async def get_users_roles(current_user: str = Depends(get_token)):
 
 
 # Endpoint create group
-@app.post("/api/groups/", response_model=ResponseContract, tags=["groups"])
+@app.post("/api/groups", response_model=ResponseContract, tags=["groups"])
 async def create_group(new_group_data: CreateGroup, current_user: str = Depends(get_token)):
     
     response = group_creation(new_group_data)
@@ -224,7 +224,7 @@ async def get_user_groups(user_id: int, current_user: str = Depends(get_token)):
 
 
 # Endpoint update group
-@app.put("/api/groups/", response_model=ResponseContract, tags=["groups"])
+@app.put("/api/groups", response_model=ResponseContract, tags=["groups"])
 async def update_group(new_group_data: UpdateGroup, current_user: str = Depends(get_token)):
     
     response = group_update(new_group_data)

@@ -225,14 +225,14 @@ def group_creation(group_data: CreateGroup):
 
     try:
         # Create new group
-        db_group = Group(name= group_data.group_name, description= group_data.group_description, color= group_data.group_color)
+        db_group = Group(name= group_data.name, description= group_data.description, color= group_data.color)
         session.add(db_group)
         session.commit()
         session.refresh(db_group)
         session.close()
     
         # Asing users to group
-        for user in group_data.group_users:
+        for user in group_data.users:
             db_roles = UserRole(user_id= user.user_id, group_id= db_group.id, role_id= user.role_id)
             session.add(db_roles)
 
@@ -242,13 +242,14 @@ def group_creation(group_data: CreateGroup):
     except Exception as e:
         session.rollback()
         message = [False, f"error in database {e}", None]
+        return message
 
     group_object = {
         'id': db_group.id,
         'name': db_group.name,
         'description': db_group.description,
         'color': db_group.color,
-        'users': group_data.group_users
+        'users': group_data.users
     }
     message = [True, "Group created successfully", group_object]
     
@@ -306,15 +307,15 @@ def get_group_details(group_id: int) -> list:
 def group_update(group_data: UpdateGroup) -> list:
     message = []
 
-    group = session.query(Group).filter(Group.id == group_data.group_id).first()
+    group = session.query(Group).filter(Group.id == group_data.id).first()
     if not group:
         message = [False, "The group does not exist", None]
         return message
     
     # Update all fields
-    group.name = group_data.group_name
-    group.description = group_data.group_description
-    group.color = group_data.group_color
+    group.name = group_data.name
+    group.description = group_data.description
+    group.color = group_data.color
 
     session.commit()
     session.refresh(group)
@@ -322,7 +323,7 @@ def group_update(group_data: UpdateGroup) -> list:
 
     # update users group
     # first delete existing register of user group
-    register_count = session.query(UserRole).filter(UserRole.group_id == group_data.group_id).delete()
+    register_count = session.query(UserRole).filter(UserRole.group_id == group_data.id).delete()
 
     if register_count == 0:
         message = [False, f"No was users in this group. Group id: {group.id}", None]
@@ -332,7 +333,7 @@ def group_update(group_data: UpdateGroup) -> list:
     session.close()
 
     # Add new users to group
-    for user in group_data.group_users:
+    for user in group_data.users:
             db_roles = UserRole(user_id= user.user_id, group_id= group.id, role_id= user.role_id)
             session.add(db_roles)
 
@@ -344,7 +345,7 @@ def group_update(group_data: UpdateGroup) -> list:
         'name': group.name,
         'description': group.description,
         'color': group.color,
-        'users': group_data.group_users
+        'users': group_data.users
     }
     message = [True, "Group updated successfully", group_object]
 
