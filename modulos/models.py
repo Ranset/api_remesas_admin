@@ -129,19 +129,6 @@ engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 session = Session()
 
-def prueba_conexion ():
-    # Consultar datos usando modelos
-    try:
-        # Consultar todos los productos
-        users = session.query(Users).all()
-        for user in users:
-            print(f"ID: {user.id}, Nombre: {user.username}, email: {user.email}")
-    except Exception as e:
-        print(f"Error in db connection: {e}")
-    finally:
-        # Cerrar la sesión
-        session.close()
-
 
 def delete_user(user_id: int):
     user_to_delete = session.query(Users).filter(Users.id == user_id).first()
@@ -225,14 +212,14 @@ def group_creation(group_data: CreateGroup):
 
     try:
         # Create new group
-        db_group = Group(name= group_data.group_name, description= group_data.group_description, color= group_data.group_color)
+        db_group = Group(name= group_data.name, description= group_data.description, color= group_data.color)
         session.add(db_group)
         session.commit()
         session.refresh(db_group)
         session.close()
     
         # Asing users to group
-        for user in group_data.group_users:
+        for user in group_data.users:
             db_roles = UserRole(user_id= user.user_id, group_id= db_group.id, role_id= user.role_id)
             session.add(db_roles)
 
@@ -242,13 +229,14 @@ def group_creation(group_data: CreateGroup):
     except Exception as e:
         session.rollback()
         message = [False, f"error in database {e}", None]
+        return message
 
     group_object = {
         'id': db_group.id,
         'name': db_group.name,
         'description': db_group.description,
         'color': db_group.color,
-        'users': group_data.group_users
+        'users': group_data.users
     }
     message = [True, "Group created successfully", group_object]
     
@@ -306,15 +294,15 @@ def get_group_details(group_id: int) -> list:
 def group_update(group_data: UpdateGroup) -> list:
     message = []
 
-    group = session.query(Group).filter(Group.id == group_data.group_id).first()
+    group = session.query(Group).filter(Group.id == group_data.id).first()
     if not group:
         message = [False, "The group does not exist", None]
         return message
     
     # Update all fields
-    group.name = group_data.group_name
-    group.description = group_data.group_description
-    group.color = group_data.group_color
+    group.name = group_data.name
+    group.description = group_data.description
+    group.color = group_data.color
 
     session.commit()
     session.refresh(group)
@@ -322,7 +310,7 @@ def group_update(group_data: UpdateGroup) -> list:
 
     # update users group
     # first delete existing register of user group
-    register_count = session.query(UserRole).filter(UserRole.group_id == group_data.group_id).delete()
+    register_count = session.query(UserRole).filter(UserRole.group_id == group_data.id).delete()
 
     if register_count == 0:
         message = [False, f"No was users in this group. Group id: {group.id}", None]
@@ -332,7 +320,7 @@ def group_update(group_data: UpdateGroup) -> list:
     session.close()
 
     # Add new users to group
-    for user in group_data.group_users:
+    for user in group_data.users:
             db_roles = UserRole(user_id= user.user_id, group_id= group.id, role_id= user.role_id)
             session.add(db_roles)
 
@@ -344,7 +332,7 @@ def group_update(group_data: UpdateGroup) -> list:
         'name': group.name,
         'description': group.description,
         'color': group.color,
-        'users': group_data.group_users
+        'users': group_data.users
     }
     message = [True, "Group updated successfully", group_object]
 
@@ -358,6 +346,7 @@ def user_group_list(user_id: int) -> list:
         session.query(
             Group.id.label("group_id"),
             Group.name.label("group_name"),
+            Group.color.label("group_color"),
             Role.name.label("user_role")
         )
         .join(UserRole, Group.id == UserRole.group_id)
@@ -373,7 +362,8 @@ def user_group_list(user_id: int) -> list:
         group_obj = {
             "id": group[0],
             "name": group[1],
-            "role": group[2]
+            "color": group[2],
+            "role": group[3]
         }
 
         groups_list.append(group_obj)
@@ -400,6 +390,5 @@ def delete_group(group_id: int):
 
 
 if __name__ == "__main__":
-    # prueba_conexion()
     response = users_roles()
     print(response)
