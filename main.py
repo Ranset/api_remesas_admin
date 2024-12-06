@@ -43,7 +43,7 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.5.2"
+app.version = "0.5.3"
 
 # Middleware implementation for CORS mannager
 origins = [

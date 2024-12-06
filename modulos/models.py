@@ -129,19 +129,6 @@ engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 session = Session()
 
-def prueba_conexion ():
-    # Consultar datos usando modelos
-    try:
-        # Consultar todos los productos
-        users = session.query(Users).all()
-        for user in users:
-            print(f"ID: {user.id}, Nombre: {user.username}, email: {user.email}")
-    except Exception as e:
-        print(f"Error in db connection: {e}")
-    finally:
-        # Cerrar la sesión
-        session.close()
-
 
 def delete_user(user_id: int):
     user_to_delete = session.query(Users).filter(Users.id == user_id).first()
@@ -403,6 +390,5 @@ def delete_group(group_id: int):
 
 
 if __name__ == "__main__":
-    # prueba_conexion()
     response = users_roles()
     print(response)
