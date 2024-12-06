@@ -3,7 +3,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
 from passlib.hash import bcrypt
 from modulos.auth import create_access_token, authenticate_user, get_token, get_user, get_user_data
-from modulos.models import session, Users, delete_user, update_user, ResponseContract, User, UserUpdate, Login
+from modulos.models import (session, 
+                            Users, 
+                            Group, 
+                            delete_user, 
+                            delete_group, 
+                            update_user, 
+                            group_creation,
+                            get_group_details,
+                            group_update,
+                            user_group_list,
+                            users_roles,
+                            user_by_nickname,
+                            ResponseContract, 
+                            User, 
+                            UserRole, 
+                            UserUpdate, 
+                            Login, 
+                            CreateGroup,
+                            UpdateGroup,
+                            Role
+                            )
 
 tags_metadata = [
     {
@@ -23,7 +43,7 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.4.6"
+app.version = "0.5.0"
 
 # Middleware implementation for CORS mannager
 origins = [
@@ -130,30 +150,102 @@ async def user_delete(user_id: int, current_user: str = Depends(get_token)):
     )
 
 
-# Endpoint protegido que requiere el token JWT
-@app.get("/api/protected")
-async def protected_route(current_user: str = Depends(get_token)):
-    """Testing protected endpoint
-    """
-    
+# Endpoint obtain user data by nickname
+@app.get("/api/user/{nickname}", response_model= ResponseContract, tags= ["users"])
+async def get_user_by_nickname(nickname: str, current_user: str = Depends(get_token)):
+    response = user_by_nickname(nickname)
+
     return ResponseContract(
-        sucess= True,
+        sucess= response[0],
         data= {
-            "message": f"Hello, {current_user}"
-            }
-        )
+            'user': response[1] 
+        }
+    )
 
 
-"""
-# Ruta de ejemplo con un parámetro de consulta
-# @app.get("/items/{item_id}")
-# async def read_item(item_id: int, q: str = None):
-#     if item_id == 1:
-#         raise HTTPException(
-#             status_code= status.HTTP_401_UNAUTHORIZED,
-#             detail="Usuario no autorizado",
-#             headers={"WWW-Authenticate": "Bearer"},
-#         )
+# Endpoint obtain all roles
+@app.get("/api/user/roles/", response_model= ResponseContract, tags= ["users"])
+async def get_users_roles(current_user: str = Depends(get_token)):
+    response = users_roles()
 
-#     return {"item_id": item_id, "q": q}
-"""
+    return ResponseContract(
+        sucess= response[0],
+        data= {
+            'roles': response[1] 
+        }
+    )
+
+
+# Endpoint create group
+@app.post("/api/groups/", response_model=ResponseContract, tags=["groups"])
+async def create_group(new_group_data: CreateGroup, current_user: str = Depends(get_token)):
+    
+    response = group_creation(new_group_data)
+
+    return ResponseContract(
+        sucess= response[0],
+        data={
+            "message": response[1],
+            "group": response[2]
+        }
+    )
+
+
+# Endpoint get group details
+@app.get("/api/groups/{group_id}", response_model=ResponseContract, tags=["groups"])
+async def get_group(group_id: int, current_user: str = Depends(get_token)):
+    """Get group object
+    """
+
+    response = get_group_details(group_id)
+
+    return ResponseContract(
+        sucess= response[0],
+        data= {
+            "group": response[1]
+        }
+    )
+
+
+# Endpoint list user groups
+@app.get("/api/groups/{user_id}", response_model=ResponseContract, tags=["groups"])
+async def get_user_groups(user_id: int, current_user: str = Depends(get_token)):
+    """Gets the groups a user belongs to
+    """
+
+    response = user_group_list(user_id)
+
+    return ResponseContract(
+        sucess= response[0],
+        data= {
+            "groups": response[1]
+        }
+    )
+
+
+# Endpoint update group
+@app.put("/api/groups/", response_model=ResponseContract, tags=["groups"])
+async def update_group(new_group_data: UpdateGroup, current_user: str = Depends(get_token)):
+    
+    response = group_update(new_group_data)
+
+    return ResponseContract(
+        sucess= response[0],
+        data={
+            "message": response[1],
+            "group": response[2]
+        }
+    )
+
+
+# Endpoint delete group
+@app.delete("/api/groups/{group_id}", response_model= ResponseContract, tags=["groups"])
+async def group_delete(group_id: int, current_user: str = Depends(get_token)):
+    response = delete_group(group_id)
+
+    return ResponseContract(
+        sucess= response[0],
+        data= {
+            'message': response[1] 
+        }
+    )
