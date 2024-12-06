@@ -43,7 +43,7 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.5.0"
+app.version = "0.5.1"
 
 # Middleware implementation for CORS mannager
 origins = [
@@ -208,7 +208,7 @@ async def get_group(group_id: int, current_user: str = Depends(get_token)):
 
 
 # Endpoint list user groups
-@app.get("/api/groups/{user_id}", response_model=ResponseContract, tags=["groups"])
+@app.get("/api/groups/user/{user_id}", response_model=ResponseContract, tags=["groups"])
 async def get_user_groups(user_id: int, current_user: str = Depends(get_token)):
     """Gets the groups a user belongs to
     """
