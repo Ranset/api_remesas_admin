@@ -205,10 +205,15 @@ def user_by_nickname(nickname) -> list:
 def users_roles() -> list:
     role_list = []
 
-    roles = session.query(Role).all()
+    try:
+        roles = session.query(Role).all()
     
-    for role in roles:
-        role_list.append({"id": role.id, "name": role.name})
+        for role in roles:
+            role_list.append({"id": role.id, "name": role.name})
+        
+    except Exception as e:
+        session.rollback()
+        return [False, f"Error obtained roles: {e}"]
 
     message = [True, role_list]
 
@@ -271,14 +276,17 @@ def get_group_details(group_id: int) -> list:
     for result in results:
         user = result.tuple()
 
+        role_obj = {
+            "id": user[5],
+            "name": user[6]
+        }
+
         user_obj ={
-            "user_id": user[0],
+            "id": user[0],
             "username": user[1],
             "first_name": user[3],
             "last_name": user[4],
-            "role_id": user[5],
-            "role_name": user[6]
-
+            "role": role_obj
         }
         group_users_list.append(user_obj)
 
