@@ -1,9 +1,12 @@
-from sqlalchemy import create_engine, Column, ForeignKey, Integer, String, Boolean, Text, DateTime
+from sqlalchemy import create_engine, Column, ForeignKey, Integer, Numeric, Boolean, Text, String
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.sql import text
 from pydantic import BaseModel
 from typing import Optional
+import datetime
+import random
+import string
 
 # Pydantic
 class User(BaseModel):
@@ -42,6 +45,19 @@ class UpdateGroup(BaseModel):
 class ResponseContract(BaseModel):
     sucess: bool
     data: dict
+
+
+class CreateOrder(BaseModel):
+    owner_id: int
+    group_id: int
+    product_id: int
+    user_id: int
+    amount: int
+    client_phone_number: str
+    card_phone_number: str
+    card_number: Optional[str] = None
+    note: Optional[str] = None
+    adress: Optional[str] = None
 
 # End Pydantic
 
@@ -98,14 +114,20 @@ class Order(Base):
     __tablename__ = 'orders'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
     product_id = Column(Integer, ForeignKey('products.id'), nullable=False)
-    created_at = Column(TIMESTAMP, default='now()')
     assigned_user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    owner_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    folio = Column(Text, unique=True, nullable=False)
+    status = Column(Text, nullable=False, default='actived')
     open = Column(Boolean, default=False)
-    folio = Column(Text, nullable=False, unique=True)
-    status = Column(Text, nullable=False, default='created')
+    created_at = Column(TIMESTAMP, default='now()')
+    amount = Column(Integer, nullable=False)
+    card_num = Column(String(16))
+    client_phone_number = Column(String, nullable=False)
+    card_phone_number = Column(String, nullable=False)
+    note = Column(Text)
+    adress = Column(Text)
 
 class UserRole(Base):
     __tablename__ = 'user_roles'
@@ -419,6 +441,81 @@ def delete_group(group_id: int):
 
     session.close()
     return message
+
+
+def generate_folio(leng= 20):
+    # Fecha y hora en formato compacto
+    timestamp = datetime.datetime.now().strftime("%y%m%d%H%M%S")
+    
+    # Caracteres aleatorios
+    caracteres_aleatorios = ''.join(random.choices(string.ascii_uppercase + string.digits, k=leng - len(timestamp)))
+    
+    # Generar el folio final
+    folio = f"{timestamp}{caracteres_aleatorios}"
+    
+    # Ajustar la longitud si excede
+    return folio[:leng]
+
+
+def get_product(product_id: int):
+    product = session.query(Product).filter(Product.id == product_id).first()
+
+    if not product:
+        session.close()
+        return "Product not found"
+
+    return product.name
+
+
+def order_create(new_order_data: CreateOrder) -> list:
+    message = []
+
+    try:
+        # Create new order
+        db_order = Order(
+            folio= generate_folio(15),
+            owner_id= new_order_data.owner_id,
+            group_id= new_order_data.group_id,
+            product_id= new_order_data.product_id,
+            assigned_user_id= new_order_data.user_id,
+            amount= new_order_data.amount,
+            client_phone_number= new_order_data.client_phone_number,
+            card_phone_number= new_order_data.card_phone_number,
+            card_num= new_order_data.card_number,
+            note= new_order_data.note,
+            adress= new_order_data.adress
+        )
+        session.add(db_order)
+        session.commit()
+        session.refresh(db_order)
+        session.close()
+    
+    except Exception as e:
+        session.rollback()
+        message = [False, f"error in database {e}", None]
+        return message
+
+    order_object = {
+        'id': db_order.id,
+        'folio': db_order.folio,
+        'owner_id': db_order.owner_id,
+        'group_id': db_order.group_id,
+        'product': {'id': db_order.product_id, 'name': get_product(db_order.product_id)},
+        'user_id': db_order.assigned_user_id,
+        'amount': db_order.amount,
+        'client_phone_number': db_order.client_phone_number,
+        'card_phone_number': db_order.card_phone_number,
+        'card_number': db_order.card_num,
+        'note': db_order.note,
+        'adress': db_order.adress,
+        'status': db_order.status,
+        'open': db_order.open,
+        'created_at': db_order.created_at
+    }
+    message = [True, "Order created successfully", order_object]
+    
+    return message
+
 
 
 if __name__ == "__main__":
