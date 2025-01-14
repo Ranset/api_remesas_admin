@@ -361,6 +361,38 @@ def group_update(group_data: UpdateGroup) -> list:
     return message
 
 
+def get_orders_of_group(group_id: int) -> list:
+    orders_list = []
+
+    try:
+        orders = session.query(Order).filter(Order.group_id == group_id).all()
+
+        for order in orders:
+            order_obj = {
+                'id': order.id,
+                'folio': order.folio,
+                'owner_id': order.owner_id,
+                'group_id': order.group_id,
+                'product': {'id': order.product_id, 'name': get_product(order.product_id)},
+                'user_id': order.assigned_user_id,
+                'amount': order.amount,
+                'client_phone_number': order.client_phone_number,
+                'card_phone_number': order.card_phone_number,
+                'card_number': order.card_num,
+                'note': order.note,
+                'adress': order.adress,
+                'status': order.status,
+                'open': order.open,
+                'created_at': order.created_at
+            }
+            orders_list.append(order_obj)
+
+        return orders_list
+
+    finally:
+        session.close()
+
+
 def user_group_list(user_id: int) -> list:
     message = []
 
@@ -417,7 +449,7 @@ def user_group_list(user_id: int) -> list:
             "description": group[2],
             "color": group[3],
             "users": group_users_list,
-            "orders": []
+            "orders": get_orders_of_group(group[0])
         }
 
         groups_list.append(group_obj)
@@ -440,6 +472,24 @@ def delete_group(group_id: int):
         message = [False, "Group not found"]
 
     session.close()
+    return message
+
+
+def all_products_list() -> list:
+    products_list = []
+
+    try:
+        products = session.query(Product).all()
+    
+        for product in products:
+            products_list.append({"id": product.id, "name": product.name})
+        
+    except Exception as e:
+        session.rollback()
+        return [False, f"Error obtained products: {e}"]
+
+    message = [True, products_list]
+
     return message
 
 
@@ -514,6 +564,80 @@ def order_create(new_order_data: CreateOrder) -> list:
     }
     message = [True, "Order created successfully", order_object]
     
+    return message
+
+
+def order_update_executed (order_id: int) -> list:
+    message = []
+
+    order = session.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        message = [False, "The order does not exist", None]
+        return message
+    
+    # Update field status
+    order.status = "executed"
+
+    session.commit()
+    session.refresh(order)
+    session.close()
+
+    order_object = {
+        'id': order.id,
+        'folio': order.folio,
+        'owner_id': order.owner_id,
+        'group_id': order.group_id,
+        'product': {'id': order.product_id, 'name': get_product(order.product_id)},
+        'user_id': order.assigned_user_id,
+        'amount': order.amount,
+        'client_phone_number': order.client_phone_number,
+        'card_phone_number': order.card_phone_number,
+        'card_number': order.card_num,
+        'note': order.note,
+        'adress': order.adress,
+        'status': order.status,
+        'open': order.open,
+        'created_at': order.created_at
+    }
+    message = [True, "Order updated successfully", order_object]
+
+    return message
+
+
+def order_update_canceled (order_id: int) -> list:
+    message = []
+
+    order = session.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        message = [False, "The order does not exist", None]
+        return message
+    
+    # Update field status
+    order.status = "cancelled"
+
+    session.commit()
+    session.refresh(order)
+    session.close()
+
+    order_object = {
+        'id': order.id,
+        'folio': order.folio,
+        'owner_id': order.owner_id,
+        'group_id': order.group_id,
+        'product': {'id': order.product_id, 'name': get_product(order.product_id)},
+        'user_id': order.assigned_user_id,
+        'amount': order.amount,
+        'client_phone_number': order.client_phone_number,
+        'card_phone_number': order.card_phone_number,
+        'card_number': order.card_num,
+        'note': order.note,
+        'adress': order.adress,
+        'status': order.status,
+        'open': order.open,
+        'created_at': order.created_at
+    }
+    message = [True, "Order updated successfully", order_object]
+
     return message
 
 

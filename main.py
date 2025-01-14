@@ -16,6 +16,9 @@ from modulos.models import (session,
                             users_roles,
                             user_by_nickname,
                             order_create,
+                            all_products_list,
+                            order_update_executed,
+                            order_update_canceled,
                             ResponseContract, 
                             User, 
                             UserRole, 
@@ -257,6 +260,22 @@ async def group_delete(group_id: int, current_user: str = Depends(get_token)):
     )
 
 
+# Endpoint list products
+@app.get("/api/order/products", response_model=ResponseContract, tags=["orders"])
+async def get_products(current_user: str = Depends(get_token)):
+    """Gets the products list a user can order
+    """
+
+    response = all_products_list()
+
+    return ResponseContract(
+        sucess= response[0],
+        data= {
+            "products": response[1]
+        }
+    )
+
+
 # Endpoint create order
 """
 Para pruebas
@@ -277,6 +296,34 @@ Para pruebas
 async def create_order(new_order_data: CreateOrder, current_user: str = Depends(get_token)):
     
     response = order_create(new_order_data)
+
+    return ResponseContract(
+        sucess= response[0],
+        data={
+            "message": response[1],
+            "order": response[2]
+        }
+    )
+
+
+@app.patch("/api/order/executed/{order_id}", response_model=ResponseContract, tags=["orders"])
+async def order_executed(order_id: int, current_user: str = Depends(get_token)):
+    
+    response = order_update_executed(order_id)
+
+    return ResponseContract(
+        sucess= response[0],
+        data={
+            "message": response[1],
+            "order": response[2]
+        }
+    )
+
+
+@app.patch("/api/order/canceled/{order_id}", response_model=ResponseContract, tags=["orders"])
+async def order_canceled(order_id: int, current_user: str = Depends(get_token)):
+    
+    response = order_update_canceled(order_id)
 
     return ResponseContract(
         sucess= response[0],
