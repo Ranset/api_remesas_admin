@@ -123,7 +123,7 @@ class Order(Base):
     open = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, default='now()')
     amount = Column(Integer, nullable=False)
-    card_num = Column(String(16))
+    card_num = Column(String(19))
     client_phone_number = Column(String, nullable=False)
     card_phone_number = Column(String, nullable=False)
     note = Column(Text)
