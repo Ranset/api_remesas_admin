@@ -58,6 +58,7 @@ class CreateOrder(BaseModel):
     card_number: Optional[str] = None
     note: Optional[str] = None
     adress: Optional[str] = None
+    status: Optional[str] = None
 
 # End Pydantic
 
@@ -567,7 +568,81 @@ def order_create(new_order_data: CreateOrder) -> list:
     return message
 
 
-def order_update_executed (order_id: int) -> list:
+# def order_update_executed (order_id: int) -> list:
+#     message = []
+
+#     order = session.query(Order).filter(Order.id == order_id).first()
+#     if not order:
+#         message = [False, "The order does not exist", None]
+#         return message
+    
+#     # Update field status
+#     order.status = "executed"
+
+#     session.commit()
+#     session.refresh(order)
+#     session.close()
+
+#     order_object = {
+#         'id': order.id,
+#         'folio': order.folio,
+#         'owner_id': order.owner_id,
+#         'group_id': order.group_id,
+#         'product': {'id': order.product_id, 'name': get_product(order.product_id)},
+#         'user_id': order.assigned_user_id,
+#         'amount': order.amount,
+#         'client_phone_number': order.client_phone_number,
+#         'card_phone_number': order.card_phone_number,
+#         'card_number': order.card_num,
+#         'note': order.note,
+#         'adress': order.adress,
+#         'status': order.status,
+#         'open': order.open,
+#         'created_at': order.created_at
+#     }
+#     message = [True, "Order updated successfully", order_object]
+
+#     return message
+
+
+# def order_update_canceled (order_id: int) -> list:
+#     message = []
+
+#     order = session.query(Order).filter(Order.id == order_id).first()
+#     if not order:
+#         message = [False, "The order does not exist", None]
+#         return message
+    
+#     # Update field status
+#     order.status = "cancelled"
+
+#     session.commit()
+#     session.refresh(order)
+#     session.close()
+
+#     order_object = {
+#         'id': order.id,
+#         'folio': order.folio,
+#         'owner_id': order.owner_id,
+#         'group_id': order.group_id,
+#         'product': {'id': order.product_id, 'name': get_product(order.product_id)},
+#         'user_id': order.assigned_user_id,
+#         'amount': order.amount,
+#         'client_phone_number': order.client_phone_number,
+#         'card_phone_number': order.card_phone_number,
+#         'card_number': order.card_num,
+#         'note': order.note,
+#         'adress': order.adress,
+#         'status': order.status,
+#         'open': order.open,
+#         'created_at': order.created_at
+#     }
+#     message = [True, "Order updated successfully", order_object]
+
+#     return message
+
+
+def order_update (order_id: int, new_order_data: CreateOrder) -> list:
     message = []
 
     order = session.query(Order).filter(Order.id == order_id).first()
@@ -575,8 +650,18 @@ def order_update_executed (order_id: int) -> list:
         message = [False, "The order does not exist", None]
         return message
     
-    # Update field status
-    order.status = "executed"
+    # Update all fields
+    order.owner_id = new_order_data.owner_id
+    order.group_id = new_order_data.group_id
+    order.product_id = new_order_data.product_id
+    order.assigned_user_id = new_order_data.user_id
+    order.amount = new_order_data.amount
+    order.client_phone_number = new_order_data.client_phone_number
+    order.card_phone_number = new_order_data.card_phone_number
+    order.card_num = new_order_data.card_number
+    order.note = new_order_data.note
+    order.adress = new_order_data.adress
+    order.status = new_order_data.status
 
     session.commit()
     session.refresh(order)
@@ -587,44 +672,7 @@ def order_update_executed (order_id: int) -> list:
         'folio': order.folio,
         'owner_id': order.owner_id,
         'group_id': order.group_id,
-        'product': {'id': order.product_id, 'name': get_product(order.product_id)},
-        'user_id': order.assigned_user_id,
-        'amount': order.amount,
-        'client_phone_number': order.client_phone_number,
-        'card_phone_number': order.card_phone_number,
-        'card_number': order.card_num,
-        'note': order.note,
-        'adress': order.adress,
-        'status': order.status,
-        'open': order.open,
-        'created_at': order.created_at
-    }
-    message = [True, "Order updated successfully", order_object]
-
-    return message
-
-
-def order_update_canceled (order_id: int) -> list:
-    message = []
-
-    order = session.query(Order).filter(Order.id == order_id).first()
-    if not order:
-        message = [False, "The order does not exist", None]
-        return message
-    
-    # Update field status
-    order.status = "cancelled"
-
-    session.commit()
-    session.refresh(order)
-    session.close()
-
-    order_object = {
-        'id': order.id,
-        'folio': order.folio,
-        'owner_id': order.owner_id,
-        'group_id': order.group_id,
-        'product': {'id': order.product_id, 'name': get_product(order.product_id)},
+        'product': {'id': order.product_id,'name': get_product(order.product_id)},
         'user_id': order.assigned_user_id,
         'amount': order.amount,
         'client_phone_number': order.client_phone_number,
