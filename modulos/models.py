@@ -120,7 +120,7 @@ class Order(Base):
     assigned_user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     owner_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     folio = Column(Text, unique=True, nullable=False)
-    status = Column(Text, nullable=False, default='actived')
+    status = Column(Text, nullable=False, default='active')
     open = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, default='now()')
     amount = Column(Integer, nullable=False)
