@@ -417,7 +417,7 @@ def user_group_list(user_id: int) -> list:
 
     for group in group_result:
         query = text(f"""
-        SELECT u.id, u.username, u.email, u.first_name, u.last_name, r.id AS role_id, r.name AS role_name
+        SELECT u.id, u.username, u.email, u.first_name, u.last_name, r.id AS role_id, r.name AS role_name, u.avatar
         FROM user_roles ur
         JOIN users u ON ur.user_id = u.id
         JOIN roles r ON ur.role_id = r.id
@@ -440,6 +440,7 @@ def user_group_list(user_id: int) -> list:
                 "username": user[1],
                 "first_name": user[3],
                 "last_name": user[4],
+                "avatar": user[7],
                 "role": role_obj
             }
             group_users_list.append(user_obj)
