@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, ForeignKey, Integer, Numeric, Boolean, Text, String
+from sqlalchemy import create_engine, Column, ForeignKey, Integer, Numeric, Boolean, Text, String, func
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.sql import text
@@ -7,6 +7,7 @@ from typing import Optional
 import datetime
 import random
 import string
+import locale
 
 # Pydantic
 class User(BaseModel):
@@ -79,6 +80,7 @@ class Users(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, default='now()')
     updated_at = Column(TIMESTAMP, default='now()')
+    device_token = Column(Text, nullable=True)
 
 class Group(Base):
     __tablename__ = 'groups'
@@ -140,7 +142,8 @@ class UserRole(Base):
     # __table_args__ = (UniqueConstraint('user_id', 'group_id', name='_user_group_uc'),)
 
 # Conections methods
-from .config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
+# from .config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
+from config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
 
 # Create URL connection for SQLAlchemy
 DATABASE_URL = f"postgresql://{SUPABASE_USER}:{SUPABASE_PASSWORD}@{DB_URL}/{SUPABASE_DB_NAME}"
@@ -690,7 +693,52 @@ def order_update (order_id: int, new_order_data: CreateOrder) -> list:
     return message
 
 
+locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')  # O 'Spanish_Spain' en Windows
+
+def orders_stats_last_3_months():
+    import datetime
+    from sqlalchemy import func
+
+    now = datetime.datetime.now()
+    three_months_ago = now - datetime.timedelta(days=90)
+
+    results = (
+        session.query(
+            func.date_trunc('month', Order.created_at).label('month'),
+            Order.status,
+            func.count(Order.id).label('orders_count'),
+            func.sum(Order.amount).label('total_amount')
+        )
+        .filter(
+            Order.created_at >= three_months_ago,
+            Order.status.in_(["executed", "cancelled"])
+        )
+        .group_by(func.date_trunc('month', Order.created_at), Order.status)
+        .order_by(func.date_trunc('month', Order.created_at).desc())
+        .all()
+    )
+
+    stats_dict = {}
+    for row in results:
+        month_key = row.month.strftime("%B")
+        if month_key not in stats_dict:
+            stats_dict[month_key] = {
+                "month": month_key,
+                "executed": {"orders_count": 0, "total_amount": 0},
+                "cancelled": {"orders_count": 0, "total_amount": 0}
+            }
+        stats_dict[month_key][row.status] = {
+            "orders_count": row.orders_count,
+            "total_amount": float(row.total_amount) if row.total_amount else 0
+        }
+
+    session.close()
+    # Devuelve una lista de diccionarios, uno por mes
+    return list(stats_dict.values())
+
+
+
 
 if __name__ == "__main__":
-    response = users_roles()
+    response = orders_stats_last_3_months()
     print(response)
