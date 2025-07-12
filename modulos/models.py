@@ -692,8 +692,10 @@ def order_update (order_id: int, new_order_data: CreateOrder) -> list:
 
     return message
 
-
-locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')  # O 'Spanish_Spain' en Windows
+try:
+    locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')  # O 'Spanish_Spain' en Windows
+except locale.Error:
+    locale.setlocale(locale.LC_TIME, 'es_ES')  # O 'Spanish_Spain' sin codificación UTF-8
 
 def orders_stats_last_3_months():
     import datetime
