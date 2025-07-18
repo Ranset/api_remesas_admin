@@ -142,8 +142,8 @@ class UserRole(Base):
     # __table_args__ = (UniqueConstraint('user_id', 'group_id', name='_user_group_uc'),)
 
 # Conections methods
-# from .config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
-from config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
+from .config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
+# from config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
 
 # Create URL connection for SQLAlchemy
 DATABASE_URL = f"postgresql://{SUPABASE_USER}:{SUPABASE_PASSWORD}@{DB_URL}/{SUPABASE_DB_NAME}"
