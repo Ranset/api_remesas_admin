@@ -142,8 +142,8 @@ class UserRole(Base):
     # __table_args__ = (UniqueConstraint('user_id', 'group_id', name='_user_group_uc'),)
 
 # Conections methods
-from .config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
-# from config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
+# from .config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
+from config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
 
 # Create URL connection for SQLAlchemy
 DATABASE_URL = f"postgresql://{SUPABASE_USER}:{SUPABASE_PASSWORD}@{DB_URL}/{SUPABASE_DB_NAME}"
@@ -692,10 +692,10 @@ def order_update (order_id: int, new_order_data: CreateOrder) -> list:
 
     return message
 
-try:
-    locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')  # O 'Spanish_Spain' en Windows
-except locale.Error:
-    locale.setlocale(locale.LC_TIME, 'es_ES')  # O 'Spanish_Spain' sin codificación UTF-8
+# try:
+#     locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')  # O 'Spanish_Spain' en Windows
+# except locale.Error:
+#     locale.setlocale(locale.LC_TIME, 'es_ES')  # O 'Spanish_Spain' sin codificación UTF-8
 
 def orders_stats_last_3_months():
     import datetime
