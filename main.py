@@ -17,8 +17,7 @@ from modulos.models import (session,
                             user_by_nickname,
                             order_create,
                             all_products_list,
-                            order_update_executed,
-                            order_update_canceled,
+                            order_update,
                             ResponseContract, 
                             User, 
                             UserRole, 
@@ -52,7 +51,7 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.6.0"
+app.version = "0.7.8"
 
 # Middleware implementation for CORS mannager
 origins = [
@@ -306,24 +305,38 @@ async def create_order(new_order_data: CreateOrder, current_user: str = Depends(
     )
 
 
-@app.patch("/api/order/executed/{order_id}", response_model=ResponseContract, tags=["orders"])
-async def order_executed(order_id: int, current_user: str = Depends(get_token)):
+# @app.patch("/api/order/executed/{order_id}", response_model=ResponseContract, tags=["orders"])
+# async def order_executed(order_id: int, current_user: str = Depends(get_token)):
     
-    response = order_update_executed(order_id)
+#     response = order_update_executed(order_id)
 
-    return ResponseContract(
-        sucess= response[0],
-        data={
-            "message": response[1],
-            "order": response[2]
-        }
-    )
+#     return ResponseContract(
+#         sucess= response[0],
+#         data={
+#             "message": response[1],
+#             "order": response[2]
+#         }
+#     )
 
 
-@app.patch("/api/order/canceled/{order_id}", response_model=ResponseContract, tags=["orders"])
-async def order_canceled(order_id: int, current_user: str = Depends(get_token)):
+# @app.patch("/api/order/canceled/{order_id}", response_model=ResponseContract, tags=["orders"])
+# async def order_canceled(order_id: int, current_user: str = Depends(get_token)):
     
-    response = order_update_canceled(order_id)
+#     response = order_update_canceled(order_id)
+
+#     return ResponseContract(
+#         sucess= response[0],
+#         data={
+#             "message": response[1],
+#             "order": response[2]
+#         }
+#     )
+
+# Endpoint para actualizar orden
+@app.put("/api/order/{order_id}", response_model=ResponseContract, tags=["orders"])
+async def update_order(order_id: int, new_order_data: CreateOrder, current_user: str = Depends(get_token)):
+    
+    response = order_update(order_id, new_order_data)
 
     return ResponseContract(
         sucess= response[0],

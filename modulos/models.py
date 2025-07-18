@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, ForeignKey, Integer, Numeric, Boolean, Text, String
+from sqlalchemy import create_engine, Column, ForeignKey, Integer, Numeric, Boolean, Text, String, func
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.sql import text
@@ -7,6 +7,7 @@ from typing import Optional
 import datetime
 import random
 import string
+import locale
 
 # Pydantic
 class User(BaseModel):
@@ -58,6 +59,7 @@ class CreateOrder(BaseModel):
     card_number: Optional[str] = None
     note: Optional[str] = None
     adress: Optional[str] = None
+    status: Optional[str] = None
 
 # End Pydantic
 
@@ -78,6 +80,7 @@ class Users(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, default='now()')
     updated_at = Column(TIMESTAMP, default='now()')
+    device_token = Column(Text, nullable=True)
 
 class Group(Base):
     __tablename__ = 'groups'
@@ -119,11 +122,11 @@ class Order(Base):
     assigned_user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     owner_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     folio = Column(Text, unique=True, nullable=False)
-    status = Column(Text, nullable=False, default='actived')
+    status = Column(Text, nullable=False, default='active')
     open = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, default='now()')
     amount = Column(Integer, nullable=False)
-    card_num = Column(String(16))
+    card_num = Column(String(19))
     client_phone_number = Column(String, nullable=False)
     card_phone_number = Column(String, nullable=False)
     note = Column(Text)
@@ -140,6 +143,7 @@ class UserRole(Base):
 
 # Conections methods
 from .config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
+# from config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
 
 # Create URL connection for SQLAlchemy
 DATABASE_URL = f"postgresql://{SUPABASE_USER}:{SUPABASE_PASSWORD}@{DB_URL}/{SUPABASE_DB_NAME}"
@@ -416,7 +420,7 @@ def user_group_list(user_id: int) -> list:
 
     for group in group_result:
         query = text(f"""
-        SELECT u.id, u.username, u.email, u.first_name, u.last_name, r.id AS role_id, r.name AS role_name
+        SELECT u.id, u.username, u.email, u.first_name, u.last_name, r.id AS role_id, r.name AS role_name, u.avatar
         FROM user_roles ur
         JOIN users u ON ur.user_id = u.id
         JOIN roles r ON ur.role_id = r.id
@@ -439,6 +443,7 @@ def user_group_list(user_id: int) -> list:
                 "username": user[1],
                 "first_name": user[3],
                 "last_name": user[4],
+                "avatar": user[7],
                 "role": role_obj
             }
             group_users_list.append(user_obj)
@@ -567,7 +572,81 @@ def order_create(new_order_data: CreateOrder) -> list:
     return message
 
 
-def order_update_executed (order_id: int) -> list:
+# def order_update_executed (order_id: int) -> list:
+#     message = []
+
+#     order = session.query(Order).filter(Order.id == order_id).first()
+#     if not order:
+#         message = [False, "The order does not exist", None]
+#         return message
+    
+#     # Update field status
+#     order.status = "executed"
+
+#     session.commit()
+#     session.refresh(order)
+#     session.close()
+
+#     order_object = {
+#         'id': order.id,
+#         'folio': order.folio,
+#         'owner_id': order.owner_id,
+#         'group_id': order.group_id,
+#         'product': {'id': order.product_id, 'name': get_product(order.product_id)},
+#         'user_id': order.assigned_user_id,
+#         'amount': order.amount,
+#         'client_phone_number': order.client_phone_number,
+#         'card_phone_number': order.card_phone_number,
+#         'card_number': order.card_num,
+#         'note': order.note,
+#         'adress': order.adress,
+#         'status': order.status,
+#         'open': order.open,
+#         'created_at': order.created_at
+#     }
+#     message = [True, "Order updated successfully", order_object]
+
+#     return message
+
+
+# def order_update_canceled (order_id: int) -> list:
+#     message = []
+
+#     order = session.query(Order).filter(Order.id == order_id).first()
+#     if not order:
+#         message = [False, "The order does not exist", None]
+#         return message
+    
+#     # Update field status
+#     order.status = "cancelled"
+
+#     session.commit()
+#     session.refresh(order)
+#     session.close()
+
+#     order_object = {
+#         'id': order.id,
+#         'folio': order.folio,
+#         'owner_id': order.owner_id,
+#         'group_id': order.group_id,
+#         'product': {'id': order.product_id, 'name': get_product(order.product_id)},
+#         'user_id': order.assigned_user_id,
+#         'amount': order.amount,
+#         'client_phone_number': order.client_phone_number,
+#         'card_phone_number': order.card_phone_number,
+#         'card_number': order.card_num,
+#         'note': order.note,
+#         'adress': order.adress,
+#         'status': order.status,
+#         'open': order.open,
+#         'created_at': order.created_at
+#     }
+#     message = [True, "Order updated successfully", order_object]
+
+#     return message
+
+
+def order_update (order_id: int, new_order_data: CreateOrder) -> list:
     message = []
 
     order = session.query(Order).filter(Order.id == order_id).first()
@@ -575,8 +654,18 @@ def order_update_executed (order_id: int) -> list:
         message = [False, "The order does not exist", None]
         return message
     
-    # Update field status
-    order.status = "executed"
+    # Update all fields
+    order.owner_id = new_order_data.owner_id
+    order.group_id = new_order_data.group_id
+    order.product_id = new_order_data.product_id
+    order.assigned_user_id = new_order_data.user_id
+    order.amount = new_order_data.amount
+    order.client_phone_number = new_order_data.client_phone_number
+    order.card_phone_number = new_order_data.card_phone_number
+    order.card_num = new_order_data.card_number
+    order.note = new_order_data.note
+    order.adress = new_order_data.adress
+    order.status = new_order_data.status
 
     session.commit()
     session.refresh(order)
@@ -587,7 +676,7 @@ def order_update_executed (order_id: int) -> list:
         'folio': order.folio,
         'owner_id': order.owner_id,
         'group_id': order.group_id,
-        'product': {'id': order.product_id, 'name': get_product(order.product_id)},
+        'product': {'id': order.product_id,'name': get_product(order.product_id)},
         'user_id': order.assigned_user_id,
         'amount': order.amount,
         'client_phone_number': order.client_phone_number,
@@ -603,45 +692,55 @@ def order_update_executed (order_id: int) -> list:
 
     return message
 
+# try:
+#     locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')  # O 'Spanish_Spain' en Windows
+# except locale.Error:
+#     locale.setlocale(locale.LC_TIME, 'es_ES')  # O 'Spanish_Spain' sin codificación UTF-8
 
-def order_update_canceled (order_id: int) -> list:
-    message = []
+def orders_stats_last_3_months():
+    import datetime
+    from sqlalchemy import func
 
-    order = session.query(Order).filter(Order.id == order_id).first()
-    if not order:
-        message = [False, "The order does not exist", None]
-        return message
-    
-    # Update field status
-    order.status = "cancelled"
+    now = datetime.datetime.now()
+    three_months_ago = now - datetime.timedelta(days=90)
 
-    session.commit()
-    session.refresh(order)
+    results = (
+        session.query(
+            func.date_trunc('month', Order.created_at).label('month'),
+            Order.status,
+            func.count(Order.id).label('orders_count'),
+            func.sum(Order.amount).label('total_amount')
+        )
+        .filter(
+            Order.created_at >= three_months_ago,
+            Order.status.in_(["executed", "cancelled"])
+        )
+        .group_by(func.date_trunc('month', Order.created_at), Order.status)
+        .order_by(func.date_trunc('month', Order.created_at).desc())
+        .all()
+    )
+
+    stats_dict = {}
+    for row in results:
+        month_key = row.month.strftime("%B")
+        if month_key not in stats_dict:
+            stats_dict[month_key] = {
+                "month": month_key,
+                "executed": {"orders_count": 0, "total_amount": 0},
+                "cancelled": {"orders_count": 0, "total_amount": 0}
+            }
+        stats_dict[month_key][row.status] = {
+            "orders_count": row.orders_count,
+            "total_amount": float(row.total_amount) if row.total_amount else 0
+        }
+
     session.close()
+    # Devuelve una lista de diccionarios, uno por mes
+    return list(stats_dict.values())
 
-    order_object = {
-        'id': order.id,
-        'folio': order.folio,
-        'owner_id': order.owner_id,
-        'group_id': order.group_id,
-        'product': {'id': order.product_id, 'name': get_product(order.product_id)},
-        'user_id': order.assigned_user_id,
-        'amount': order.amount,
-        'client_phone_number': order.client_phone_number,
-        'card_phone_number': order.card_phone_number,
-        'card_number': order.card_num,
-        'note': order.note,
-        'adress': order.adress,
-        'status': order.status,
-        'open': order.open,
-        'created_at': order.created_at
-    }
-    message = [True, "Order updated successfully", order_object]
-
-    return message
 
 
 
 if __name__ == "__main__":
-    response = users_roles()
+    response = orders_stats_last_3_months()
     print(response)
