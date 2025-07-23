@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
 from passlib.hash import bcrypt
 from modulos.auth import create_access_token, authenticate_user, get_token, get_user, get_user_data
+from modulos.statics import get_order_statistics
 from modulos.models import (session, 
                             Users, 
                             Group, 
@@ -46,12 +47,16 @@ tags_metadata = [
         "name": "orders",
         "description": "Orders's objects and related, like products, etc.",
     },
+    {
+        "name": "Stats",
+        "description": "Statistics related to groups.",
+    },
     ]
 
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.7.8"
+app.version = "0.8.0"
 
 # Middleware implementation for CORS mannager
 origins = [
@@ -343,5 +348,21 @@ async def update_order(order_id: int, new_order_data: CreateOrder, current_user:
         data={
             "message": response[1],
             "order": response[2]
+        }
+    )
+
+
+# Endpoint get statics for orders in the last 3 months
+@app.get("/api/order/statics/{group_id}", response_model=ResponseContract, tags=["Stats"])
+async def statics(group_id: int, current_user: str = Depends(get_token)):
+    """Gets the statistics for orders in the last 3 months
+    """
+
+    response = get_order_statistics(group_id)
+
+    return ResponseContract(
+        sucess= response[0],
+        data= {
+            "statistics": response[1]
         }
     )
