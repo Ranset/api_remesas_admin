@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
 from passlib.hash import bcrypt
 from modulos.auth import create_access_token, authenticate_user, get_token, get_user, get_user_data
-from modulos.statics import get_order_statistics
+from modulos.statics import get_order_statistics, download_statics_excel
 from modulos.models import (session, 
                             Users, 
                             Group, 
@@ -366,3 +366,28 @@ async def statics(group_id: int, current_user: str = Depends(get_token)):
             "statistics": response[1]
         }
     )
+
+
+# Endpoint download statics Excel
+@app.get("/api/order/statics/{group_id}/download", response_model=ResponseContract, tags=["Stats"])
+async def download_statics(group_id: int, current_user: str = Depends(get_token)):
+    """Downloads the statistics for orders in the last 3 months as an Excel file
+    """
+
+    response = download_statics_excel(group_id)
+    if not response:
+        return ResponseContract(
+            sucess=False,
+            data={
+                "message": "Error generating Excel file"
+            }
+        )
+
+    # return ResponseContract(
+    #     sucess=True,
+    #     data={
+    #         "file": response
+    #     }
+    # )
+
+    return response
