@@ -20,6 +20,7 @@ class UserUpdate(BaseModel):
     phone_number: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    device_token: Optional[str] = None
 
 class Login(BaseModel):
     email: str
