@@ -3,6 +3,7 @@ import datetime
 from sqlalchemy import func
 
 def get_order_statistics(group_id: int):
+    from .date_utility import DateUtlility
 
     now = datetime.datetime.now()
     three_months_ago = now - datetime.timedelta(days=90)
@@ -24,12 +25,14 @@ def get_order_statistics(group_id: int):
         .all()
     )
 
+    translate = DateUtlility()
+
     stats_dict = {}
     for row in results:
         month_key = row.month.strftime("%B")
         if month_key not in stats_dict:
             stats_dict[month_key] = {
-                "month": month_key,
+                "month": translate.translate_month(month_key),
                 "executed": {"orders_count": 0, "total_amount": 0},
                 "cancelled": {"orders_count": 0, "total_amount": 0}
             }
