@@ -77,9 +77,9 @@ def send_push_notification_fcm_v1(token: str, title: str, body: str, data: dict 
     return response.json()
 
 if __name__ == "__main__":
-    token = "eKtGywUORbOvW3rD9nQG2D:APA91bGJ5eBkrGkHDStqAJC2gl2o7lv5CFGuICvRwBhwtVvMF4w0iHmtcHzRiWGtCj5vHt1L5Kl4sNrcozNeQU6SEEe2HVZFSiK6KZ7w8q2p0ezavwZ-Uu4"
+    token = "dj4BHCYCTJiLnUgyEsl_px:APA91bGBZaHNynVkDxfS0pkxl-dhjK__3rtDwvTDuPi5gfalZis-JcN6O6u23ssasO5V1Y8v7I9VraKJHfMsmGZ4oZlAQh2BGB05GK_kOzZRNbdvJPp5GKY"
     title = "Notificación API"
-    body = "Esta es una notificación desde la api de remesas."
+    body = "Avísame si te llega esta notificación."
     project_id = "remesa-admin"
     response = send_push_notification_fcm_v1(token, title, body, project_id=project_id)
     print("Response from FCM:", response)

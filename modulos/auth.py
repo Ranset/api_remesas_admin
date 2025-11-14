@@ -50,6 +50,7 @@ def get_user_data(email: str) -> dict:
         "avatar": user_data.avatar, 
         "is_active": user_data.is_active,
         "updated_at": user_data.updated_at,
+        "device_token": user_data.device_token
         }
     
     return user_data

@@ -1,50 +1,96 @@
-from .models import session, Order
+from .models import session, Order, Product
 import datetime
 from sqlalchemy import func
 
 def get_order_statistics(group_id: int):
-
     now = datetime.datetime.now()
     three_months_ago = now - datetime.timedelta(days=90)
 
-    results = (
-        session.query(
-            func.date_trunc('month', Order.created_at).label('month'),
-            Order.status,
-            func.count(Order.id).label('orders_count'),
-            func.sum(Order.amount).label('total_amount')
-        )
+    # Pre-cargar productos
+    products = {p.id: p.name for p in session.query(Product).all()}
+
+    # Obtener órdenes de los últimos 3 meses
+    orders = (
+        session.query(Order)
         .filter(
             Order.created_at >= three_months_ago,
-            Order.status.in_(["executed", "cancelled"]),
-            Order.group_id.in_([str(group_id)])
+            Order.group_id == group_id
         )
-        .group_by(func.date_trunc('month', Order.created_at), Order.status)
-        .order_by(func.date_trunc('month', Order.created_at).desc())
         .all()
     )
 
-    stats_dict = {}
-    for row in results:
-        month_key = row.month.strftime("%B")
-        if month_key not in stats_dict:
-            stats_dict[month_key] = {
+    # Agrupar por mes
+    stats_by_month = {}
+    for order in orders:
+        month_key = order.created_at.strftime("%B")
+        if month_key not in stats_by_month:
+            stats_by_month[month_key] = {
                 "month": month_key,
-                "executed": {"orders_count": 0, "total_amount": 0},
-                "cancelled": {"orders_count": 0, "total_amount": 0}
+                "orders": {
+                    "total": 0,
+                    "totalAmount": 0,
+                    "byStatus": {},
+                    "byProduct": {}
+                }
             }
-        stats_dict[month_key][row.status] = {
-            "orders_count": row.orders_count,
-            "total_amount": float(row.total_amount) if row.total_amount else 0
-        }
+        stats_by_month[month_key]["orders"]["total"] += 1
+        stats_by_month[month_key]["orders"]["totalAmount"] += float(order.amount) if order.amount else 0
+
+        # Agrupar por status
+        status = order.status
+        if status not in stats_by_month[month_key]["orders"]["byStatus"]:
+            stats_by_month[month_key]["orders"]["byStatus"][status] = 0
+        stats_by_month[month_key]["orders"]["byStatus"][status] += 1
+
+        # Agrupar por producto
+        product_id = order.product_id
+        if product_id not in stats_by_month[month_key]["orders"]["byProduct"]:
+            stats_by_month[month_key]["orders"]["byProduct"][product_id] = 0
+        stats_by_month[month_key]["orders"]["byProduct"][product_id] += 1
+
+    # Formatear la respuesta final
+    status_names = {
+        "executed": "Ejecutada",
+        "active": "Activa",
+        "cancelled": "Cancelada"
+    }
+    result = []
+    for month, data in stats_by_month.items():
+        total_orders = data["orders"]["total"]
+        by_status = []
+        for status, value in data["orders"]["byStatus"].items():
+            percentage = round((value / total_orders) * 100, 2) if total_orders else 0 
+            by_status.append({
+                "status": {
+                    "name": status_names.get(status, status),
+                    "value": status
+                },
+                "value": value,
+                "percentage": percentage
+            })
+        by_product = []
+        for product_id, value in data["orders"]["byProduct"].items():
+            percentage = round((value / total_orders) * 100, 2) if total_orders else 0
+            by_product.append({
+                "product": {
+                    "id": product_id,
+                    "name": products.get(product_id, "")
+                },
+                "value": value,
+                "percentage": percentage
+            })
+        result.append({
+            "month": month,
+            "orders": {
+                "total": total_orders,
+                "totalAmount": data["orders"]["totalAmount"],
+                "byStatus": by_status,
+                "byProduct": by_product
+            }
+        })
 
     session.close()
-    # Devuelve una lista de diccionarios, uno por mes
-    static = list(stats_dict.values())
-
-    message = [True, static]
-
-    return message
+    return [True, result]
 
 
 def get_order_statistics_detailed(group_id: int):
@@ -122,26 +168,26 @@ def download_statics_excel(group_id: int):
     sheet.title = "Order Statistics"
 
     headers = [
-        "Estado", "Número tarjeta", "Product ID", "Cantidad", "Fecha de creación",
-        "Assigned User ID", "Folio", "Teléfono Cliente", "Teléfono Tarjeta",
-        "Nota", "Owner ID"
+        "Folio", "Producto", "Estado", "Número tarjeta", "Cantidad", "Fecha de creación",
+        "Usuario Asignado", "Teléfono Cliente", "Teléfono Tarjeta", "Creador",
+        "Nota"
     ]
     sheet.append(headers)
 
     for status in ["executed", "cancelled"]:
         for order in response[1][status]:
             sheet.append([
+                order["folio"],
+                order["product"]["name"],
                 status,
                 order["card_num"],
-                f'{order["product"]["id"]} - {order["product"]["name"]}',
                 order["amount"],
                 order["created_at"].strftime("%Y-%m-%d %H:%M:%S") if order["created_at"] else "",
-                f'{order["assigned_user"]["id"]} - {order["assigned_user"]["name"]}',
-                order["folio"],
+                order["assigned_user"]["name"],
                 order["client_phone_number"],
                 order["card_phone_number"],
+                order["owner"]["name"],
                 order["note"],
-                f'{order["owner"]["id"]} - {order["owner"]["name"]}'
             ])
 
     # Save the workbook to a BytesIO stream

@@ -23,5 +23,5 @@ def send_push_notification(token: str, title: str, body: str):
 
 if __name__ == "__main__":
     # Example usage
-    test_token = "eKtGywUORbOvW3rD9nQG2D:APA91bGJ5eBkrGkHDStqAJC2gl2o7lv5CFGuICvRwBhwtVvMF4w0iHmtcHzRiWGtCj5vHt1L5Kl4sNrcozNeQU6SEEe2HVZFSiK6KZ7w8q2p0ezavwZ-Uu4"
-    send_push_notification(test_token, "Notificación API", "Esta es una notificación desde la api de remesas.")
+    test_token = "dj4BHCYCTJiLnUgyEsI_px:APA91bGBZaHNynVkDxfS0pkxl-dhjK__3rtDwvTDuPi5gfalZis-JcN6O6u23ssasO5V1Y8v7I9VraKJHfMsmGZ4oZIAQh2BGBO5GK_kOzZRNbdvJPp5GKY"
+    send_push_notification(test_token, "Notificación API", "Avísame si te llega esta notificación.")
