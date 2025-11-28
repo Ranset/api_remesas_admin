@@ -3,6 +3,8 @@ import datetime
 from sqlalchemy import func
 
 def get_order_statistics(group_id: int):
+    from .date_utility import DateUtlility
+
     now = datetime.datetime.now()
     three_months_ago = now - datetime.timedelta(days=90)
 
@@ -18,6 +20,8 @@ def get_order_statistics(group_id: int):
         )
         .all()
     )
+
+    translate = DateUtlility()
 
     # Agrupar por mes
     stats_by_month = {}
