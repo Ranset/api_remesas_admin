@@ -1,7 +1,7 @@
 import firebase_admin
 from firebase_admin import messaging, credentials
 
-cred = credentials.Certificate("modulos/remesa-admin-firebase-adminsdk-fbsvc-911952730b.json")
+cred = credentials.Certificate("modulos/testpush.json")
 firebase_admin.initialize_app(cred)
 
 def send_push_notification(token: str, title: str, body: str):
@@ -23,5 +23,5 @@ def send_push_notification(token: str, title: str, body: str):
 
 if __name__ == "__main__":
     # Example usage
-    test_token = "dj4BHCYCTJiLnUgyEsI_px:APA91bGBZaHNynVkDxfS0pkxl-dhjK__3rtDwvTDuPi5gfalZis-JcN6O6u23ssasO5V1Y8v7I9VraKJHfMsmGZ4oZIAQh2BGBO5GK_kOzZRNbdvJPp5GKY"
-    send_push_notification(test_token, "Notificación API", "Avísame si te llega esta notificación.")
+    test_token = "fh28WPTfiW3LDGREIKNPKK:APA91bHNKMV5hYTFvx14Wapb7ERmNdBEL7r5a_LqV88vd4BwX3nWxaCFUZV8y1nXr-XmgQK99Pltoj38d9y5UYOfD3fo795-HhOQKkwfxMXAeECBu9teFHY"
+    send_push_notification(test_token, "Notificación API", "Prueba desde local con Python")
