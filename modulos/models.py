@@ -7,7 +7,6 @@ from typing import Optional
 import datetime
 import random
 import string
-import locale
 
 # Pydantic
 class User(BaseModel):
@@ -74,7 +73,7 @@ class Users(Base):
     phone_number = Column(Text, nullable=True)
     avatar = Column(Text, nullable=True)
     email = Column(Text, nullable=False, unique=True)
-    password = Column(Text, nullable=False)
+    password = Column(Text, nullable=True)
     first_name = Column(Text, nullable=True)
     last_name = Column(Text, nullable=True)
     username = Column(Text, nullable=False, unique=True)
@@ -82,6 +81,7 @@ class Users(Base):
     created_at = Column(TIMESTAMP, default='now()')
     updated_at = Column(TIMESTAMP, default='now()')
     device_token = Column(Text, nullable=True)
+    mail_code = Column(Integer, nullable=True)
 
 class Group(Base):
     __tablename__ = 'groups'
@@ -208,7 +208,8 @@ def user_by_nickname(nickname) -> list:
         "username": user.username,
         "first_name": user.first_name,
         "last_name": user.last_name,
-        "avatar": user.avatar
+        "avatar": user.avatar,
+        "device_token": user.device_token
     }
 
     message = [True, user_data]

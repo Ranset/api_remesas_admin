@@ -1,9 +1,11 @@
 from fastapi import FastAPI, HTTPException, Depends,status
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import timedelta
+from datetime import timedelta, datetime
 from passlib.hash import bcrypt
-from modulos.auth import create_access_token, authenticate_user, get_token, get_user, get_user_data
+from modulos.auth import create_access_token, authenticate_user, get_token, get_user, get_user_data, verify_code
+from modulos.mailjet_email import MailjetEmail
 from modulos.statics import get_order_statistics, download_statics_excel
+from modulos.date_utility import DateUtlility
 from modulos.models import (session, 
                             Users, 
                             Group, 
@@ -82,7 +84,8 @@ app.add_middleware(
 @app.post("/api/auth/register", tags=["auth"])
 async def register(user: User):
     try:
-        new_user = Users(email= user.email, password= bcrypt.hash(user.password), username= user.username)
+        code = DateUtlility().generar_codigo()
+        new_user = Users(email= user.email, password= bcrypt.hash(user.password), username= user.username, mail_code= code, is_active= False)
         session.add(new_user)
         session.commit()
         user_data = get_user(user.email)
@@ -92,7 +95,12 @@ async def register(user: User):
             "username": user_data.username,
             "is_active": user_data.is_active,
             "updated_at": user_data.updated_at,
+            "mail_code": True if user_data.mail_code else False
             }
+        
+        email_code = MailjetEmail()
+        email_code.send_email_verify(code[-4:], user_data["email"], user_data["username"])  # Send only the last 4 digits as code, email and username
+
         return ResponseContract(
             sucess= True,
             data= {
@@ -109,6 +117,106 @@ async def register(user: User):
         )
     finally:
         session.close()
+
+#Endpoint para verificar el código de usuario
+@app.post("/api/auth/verify_email/{user_id}", response_model=ResponseContract, tags=["auth"])
+async def verify_email(user_id: int, code: str):
+    
+    verify = verify_code(user_id, code)
+
+    if verify[0]:
+        user = session.query(Users).filter(Users.id == user_id).first()
+        user.mail_code = None  # Clear the mail_code to indicate verification
+        user.is_active = True
+        session.commit()
+
+        email_welcome = MailjetEmail()
+        email_welcome.send_email_welcome(user.email, user.username)
+        
+        session.close()
+
+    return ResponseContract(
+        sucess= verify[0],
+        data= {
+            'message': verify[1]
+        }
+    )
+    
+
+# Endpoint para enviar email de restablecimiento de contraseña
+@app.post("/api/auth/forgot_password", response_model=ResponseContract, tags=["auth"])
+async def forgot_password(email: str, code_or_password = "X"):
+    user = get_user(email)
+
+    if not user:
+        return ResponseContract(
+            sucess= False,
+            data= {
+                'message': 'User not found'
+            }
+        )
+
+    if user.password is None:
+        user = session.query(Users).filter(Users.email == email).first()
+        if user:
+            user.password = bcrypt.hash(code_or_password)
+            session.commit()
+            session.refresh(user)  # Refresca el objeto para asegurar que se guardó
+
+            email_new_password = MailjetEmail()
+            email_new_password.send_email_new_password(user.email, user.username)
+
+            session.close()
+
+            return ResponseContract(
+                sucess=True,
+                data={
+                    'message': 'Password has been reset successfully'
+                }
+            )
+        else:
+            return ResponseContract(
+                sucess=False,
+                data={
+                    'message': 'User not found'
+                }
+            )
+
+    if len(code_or_password) == 4 and user.mail_code != None:        
+        verify = verify_code(user.id, code_or_password)
+
+        if verify[0]:
+            user = session.query(Users).filter(Users.id == user.id).first()
+            user.mail_code = None  # Clear the mail_code to indicate verification
+            user.password = None  # Set password to None to force reset
+            session.commit()            
+            session.close()
+
+        return ResponseContract(
+            sucess= verify[0],
+            data= {
+                'message': verify[1]
+            }
+        )
+
+        
+    code = DateUtlility().generar_codigo()
+    user = session.query(Users).filter(Users.email == email).first()
+    user.mail_code = code
+    session.commit()
+
+    email_reset = MailjetEmail()
+    email_reset.send_email_password_reset(code[-4:], user.email, user.username)  # Send only the last 4 digits as code, email and username
+
+    session.close()
+
+    return ResponseContract(
+        sucess= True,
+        data= {
+            'message': 'Password reset code sent to email'
+        }
+    )
+    
 
 
 # Endpoint de login
