@@ -21,6 +21,7 @@ from modulos.models import (session,
                             order_create,
                             all_products_list,
                             order_update,
+                            send_new_order_notification,
                             ResponseContract, 
                             User, 
                             UserRole, 
@@ -408,6 +409,8 @@ Para pruebas
 async def create_order(new_order_data: CreateOrder, current_user: str = Depends(get_token)):
     
     response = order_create(new_order_data)
+
+    notify = send_new_order_notification(response[2]["user_id"], response[2]["folio"])
 
     return ResponseContract(
         sucess= response[0],

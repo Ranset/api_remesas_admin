@@ -694,6 +694,20 @@ def order_update (order_id: int, new_order_data: CreateOrder) -> list:
 
     return message
 
+def send_new_order_notification(user_id: int, order_folio: str):
+    from .notifications import send_push_notification
+
+    device_token = session.query(Users.device_token).filter(Users.id == user_id).scalar()
+    title = "Tienes una nueva orden"
+    body = f"La orden número {order_folio} se le ha asignado. Revisa la aplicación para más detalles."
+
+    if device_token:
+        send_push_notification(device_token, title, body)
+
+        return f"Notification sent successfully to device {device_token}"
+
+    return "Notification not send: No device token found"
+
 
 if __name__ == "__main__":
     pass
