@@ -416,7 +416,8 @@ async def create_order(new_order_data: CreateOrder, current_user: str = Depends(
         sucess= response[0],
         data={
             "message": response[1],
-            "order": response[2]
+            "order": response[2],
+            "notification": notify
         }
     )
 

@@ -702,9 +702,9 @@ def send_new_order_notification(user_id: int, order_folio: str):
     body = f"La orden número {order_folio} se le ha asignado. Revisa la aplicación para más detalles."
 
     if device_token:
-        send_push_notification(device_token, title, body)
+        response = send_push_notification(device_token, title, body)
 
-        return f"Notification sent successfully to device {device_token}"
+        return response
 
     return "Notification not send: No device token found"
 
