@@ -7,7 +7,6 @@ from typing import Optional
 import datetime
 import random
 import string
-import locale
 
 # Pydantic
 class User(BaseModel):
@@ -20,6 +19,7 @@ class UserUpdate(BaseModel):
     phone_number: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    device_token: Optional[str] = None
 
 class Login(BaseModel):
     email: str
@@ -73,7 +73,7 @@ class Users(Base):
     phone_number = Column(Text, nullable=True)
     avatar = Column(Text, nullable=True)
     email = Column(Text, nullable=False, unique=True)
-    password = Column(Text, nullable=False)
+    password = Column(Text, nullable=True)
     first_name = Column(Text, nullable=True)
     last_name = Column(Text, nullable=True)
     username = Column(Text, nullable=False, unique=True)
@@ -81,6 +81,7 @@ class Users(Base):
     created_at = Column(TIMESTAMP, default='now()')
     updated_at = Column(TIMESTAMP, default='now()')
     device_token = Column(Text, nullable=True)
+    mail_code = Column(Integer, nullable=True)
 
 class Group(Base):
     __tablename__ = 'groups'
@@ -207,7 +208,8 @@ def user_by_nickname(nickname) -> list:
         "username": user.username,
         "first_name": user.first_name,
         "last_name": user.last_name,
-        "avatar": user.avatar
+        "avatar": user.avatar,
+        "device_token": user.device_token
     }
 
     message = [True, user_data]
@@ -692,55 +694,20 @@ def order_update (order_id: int, new_order_data: CreateOrder) -> list:
 
     return message
 
-# try:
-#     locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')  # O 'Spanish_Spain' en Windows
-# except locale.Error:
-#     locale.setlocale(locale.LC_TIME, 'es_ES')  # O 'Spanish_Spain' sin codificación UTF-8
+def send_new_order_notification(user_id: int, order_folio: str):
+    from .notifications import send_push_notification
 
-def orders_stats_last_3_months():
-    import datetime
-    from sqlalchemy import func
+    device_token = session.query(Users.device_token).filter(Users.id == user_id).scalar()
+    title = "Tienes una nueva orden"
+    body = f"La orden número {order_folio} se le ha asignado. Revisa la aplicación para más detalles."
 
-    now = datetime.datetime.now()
-    three_months_ago = now - datetime.timedelta(days=90)
+    if device_token:
+        response = send_push_notification(device_token, title, body)
 
-    results = (
-        session.query(
-            func.date_trunc('month', Order.created_at).label('month'),
-            Order.status,
-            func.count(Order.id).label('orders_count'),
-            func.sum(Order.amount).label('total_amount')
-        )
-        .filter(
-            Order.created_at >= three_months_ago,
-            Order.status.in_(["executed", "cancelled"])
-        )
-        .group_by(func.date_trunc('month', Order.created_at), Order.status)
-        .order_by(func.date_trunc('month', Order.created_at).desc())
-        .all()
-    )
+        return response
 
-    stats_dict = {}
-    for row in results:
-        month_key = row.month.strftime("%B")
-        if month_key not in stats_dict:
-            stats_dict[month_key] = {
-                "month": month_key,
-                "executed": {"orders_count": 0, "total_amount": 0},
-                "cancelled": {"orders_count": 0, "total_amount": 0}
-            }
-        stats_dict[month_key][row.status] = {
-            "orders_count": row.orders_count,
-            "total_amount": float(row.total_amount) if row.total_amount else 0
-        }
-
-    session.close()
-    # Devuelve una lista de diccionarios, uno por mes
-    return list(stats_dict.values())
-
-
+    return "Notification not send: No device token found"
 
 
 if __name__ == "__main__":
-    response = orders_stats_last_3_months()
-    print(response)
+    pass
