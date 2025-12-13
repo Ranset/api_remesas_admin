@@ -50,6 +50,7 @@ def get_user_data(email: str) -> dict:
         "avatar": user_data.avatar, 
         "is_active": user_data.is_active,
         "updated_at": user_data.updated_at,
+        "notify": user_data.notify,
         "device_token": user_data.device_token,
         "mail_code": True if user_data.mail_code else False
         }
@@ -59,6 +60,9 @@ def get_user_data(email: str) -> dict:
 
 def authenticate_user(email: str, password: str):
     user = get_user(email)
+
+    if not user:
+        return None
 
     if not user.password:
         return None
@@ -97,9 +101,9 @@ def get_token(api_key: str = Security(api_key_header)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization format")
     
 
-def verify_code(user_id: int, code: str):
+def verify_code(user_email: str, code: str):
     try:
-        user = session.query(Users).filter(Users.id == user_id).first()
+        user = session.query(Users).filter(Users.email == user_email).first()
         if not user:
             return (False, 'User not found')
         

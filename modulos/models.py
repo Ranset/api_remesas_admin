@@ -14,11 +14,23 @@ class User(BaseModel):
     password: str
     username: str
 
+class Email(BaseModel):
+    email: str
+
+class VerifyEmail(BaseModel):
+    email: str
+    code: str
+
+class ForgotPassword(BaseModel):
+    email: str
+    code_or_password: str
+
 class UserUpdate(BaseModel):
     avatar: Optional[str] = None
     phone_number: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    notify: Optional[bool] = None
     device_token: Optional[str] = None
 
 class Login(BaseModel):
@@ -82,6 +94,7 @@ class Users(Base):
     updated_at = Column(TIMESTAMP, default='now()')
     device_token = Column(Text, nullable=True)
     mail_code = Column(Integer, nullable=True)
+    notify = Column(Boolean, default=False)
 
 class Group(Base):
     __tablename__ = 'groups'
@@ -694,19 +707,25 @@ def order_update (order_id: int, new_order_data: CreateOrder) -> list:
 
     return message
 
-def send_new_order_notification(user_id: int, order_folio: str):
+def send_new_order_notification(user_id: int, order_folio: str, group_id: int, order_id: int):
     from .notifications import send_push_notification
 
     device_token = session.query(Users.device_token).filter(Users.id == user_id).scalar()
+    notify = session.query(Users.notify).filter(Users.id == user_id).scalar()
     title = "Tienes una nueva orden"
     body = f"La orden número {order_folio} se le ha asignado. Revisa la aplicación para más detalles."
+    data = {
+        "action": "NUEVA_ORDEN_ASIGNADA",
+        "group_id": group_id,
+        "order_id": order_id
+    }
 
-    if device_token:
-        response = send_push_notification(device_token, title, body)
+    if device_token and notify:
+        response = send_push_notification(device_token, title, body, data)
 
         return response
 
-    return "Notification not send: No device token found"
+    return "Notification not send: No device token found or notifications disabled"
 
 
 if __name__ == "__main__":

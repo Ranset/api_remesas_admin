@@ -24,13 +24,14 @@ from modulos.models import (session,
                             send_new_order_notification,
                             ResponseContract, 
                             User, 
-                            UserRole, 
                             UserUpdate, 
                             Login, 
                             CreateGroup,
                             UpdateGroup,
-                            Role,
-                            CreateOrder
+                            CreateOrder,
+                            Email,
+                            VerifyEmail,
+                            ForgotPassword
                             )
 
 tags_metadata = [
@@ -59,7 +60,7 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.8.0"
+app.version = "0.8.1"
 
 # Middleware implementation for CORS mannager
 origins = [
@@ -82,7 +83,7 @@ app.add_middleware(
 
 
 # Enddpoint de registro de usuario
-@app.post("/api/auth/register", tags=["auth"])
+@app.post("/api/auth/register", tags=["auth"], response_model=ResponseContract)
 async def register(user: User):
     try:
         code = DateUtlility().generar_codigo()
@@ -119,14 +120,50 @@ async def register(user: User):
     finally:
         session.close()
 
+#Ebdpoint reenviar código de verificación
+@app.post("/api/auth/resend_verification_code", response_model=ResponseContract, tags=["auth"])
+async def resend_verification_code(email: Email):
+    try:
+        code = DateUtlility().generar_codigo()
+
+        user_data = get_user(email.email)
+        user_data = {
+            "id": user_data.id, 
+            "email": user_data.email, 
+            "username": user_data.username,
+            "is_active": user_data.is_active,
+            "updated_at": user_data.updated_at,
+            "mail_code": True if user_data.mail_code else False
+            }
+        
+        email_code = MailjetEmail()
+        email_code.send_email_verify(code[-4:], user_data["email"], user_data["username"])  # Send only the last 4 digits as code, email and username
+
+        return ResponseContract(
+            sucess= True,
+            data= {
+                'message': 'Verification code resent successfully'
+            }
+        )
+    except Exception as e:
+        session.rollback()
+        return ResponseContract(
+            sucess= False,
+            data= {
+                'error': str(e.__cause__)
+            }
+        )
+    finally:
+        session.close()
+
 #Endpoint para verificar el código de usuario
-@app.post("/api/auth/verify_email/{user_id}", response_model=ResponseContract, tags=["auth"])
-async def verify_email(user_id: int, code: str):
+@app.post("/api/auth/verify_email", response_model=ResponseContract, tags=["auth"])
+async def verify_email(verify_email: VerifyEmail):
     
-    verify = verify_code(user_id, code)
+    verify = verify_code(verify_email.email, verify_email.code)
 
     if verify[0]:
-        user = session.query(Users).filter(Users.id == user_id).first()
+        user = session.query(Users).filter(Users.email == verify_email.email).first()
         user.mail_code = None  # Clear the mail_code to indicate verification
         user.is_active = True
         session.commit()
@@ -146,8 +183,8 @@ async def verify_email(user_id: int, code: str):
 
 # Endpoint para enviar email de restablecimiento de contraseña
 @app.post("/api/auth/forgot_password", response_model=ResponseContract, tags=["auth"])
-async def forgot_password(email: str, code_or_password = "X"):
-    user = get_user(email)
+async def forgot_password(forgot: ForgotPassword):
+    user = get_user(forgot.email)
 
     if not user:
         return ResponseContract(
@@ -158,9 +195,9 @@ async def forgot_password(email: str, code_or_password = "X"):
         )
 
     if user.password is None:
-        user = session.query(Users).filter(Users.email == email).first()
+        user = session.query(Users).filter(Users.email == forgot.email).first()
         if user:
-            user.password = bcrypt.hash(code_or_password)
+            user.password = bcrypt.hash(forgot.code_or_password)
             session.commit()
             session.refresh(user)  # Refresca el objeto para asegurar que se guardó
 
@@ -183,8 +220,8 @@ async def forgot_password(email: str, code_or_password = "X"):
                 }
             )
 
-    if len(code_or_password) == 4 and user.mail_code != None:        
-        verify = verify_code(user.id, code_or_password)
+    if len(forgot.code_or_password) == 4 and user.mail_code != None:        
+        verify = verify_code(user.email, forgot.code_or_password)
 
         if verify[0]:
             user = session.query(Users).filter(Users.id == user.id).first()
@@ -202,7 +239,7 @@ async def forgot_password(email: str, code_or_password = "X"):
 
         
     code = DateUtlility().generar_codigo()
-    user = session.query(Users).filter(Users.email == email).first()
+    user = session.query(Users).filter(Users.email == forgot.email).first()
     user.mail_code = code
     session.commit()
 
@@ -227,7 +264,10 @@ async def login(user: Login):
     if not db_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    access_token_expires = timedelta(minutes=30)
+    if not db_user.is_active:
+        raise HTTPException(status_code=403, detail="Inactive user")
+    
+    access_token_expires = timedelta(days=7)
     access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
     token = {"access_token": access_token, "token_type": "bearer"}
 
@@ -410,7 +450,7 @@ async def create_order(new_order_data: CreateOrder, current_user: str = Depends(
     
     response = order_create(new_order_data)
 
-    notify = send_new_order_notification(response[2]["user_id"], response[2]["folio"])
+    notify = send_new_order_notification(response[2]["user_id"], response[2]["folio"], response[2]["group_id"], response[2]["id"])
 
     return ResponseContract(
         sucess= response[0],
