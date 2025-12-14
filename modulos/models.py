@@ -716,8 +716,8 @@ def send_new_order_notification(user_id: int, order_folio: str, group_id: int, o
     body = f"La orden número {order_folio} se le ha asignado. Revisa la aplicación para más detalles."
     data = {
         "action": "NUEVA_ORDEN_ASIGNADA",
-        "group_id": group_id,
-        "order_id": order_id
+        "group_id": str(group_id),
+        "order_id": str(order_id)
     }
 
     if device_token and notify:
