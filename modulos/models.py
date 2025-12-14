@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, ForeignKey, Integer, Numeric, Boolean, Text, String
+from sqlalchemy import create_engine, Column, ForeignKey, Integer, Numeric, Boolean, Text, String, func
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.sql import text
@@ -14,11 +14,24 @@ class User(BaseModel):
     password: str
     username: str
 
+class Email(BaseModel):
+    email: str
+
+class VerifyEmail(BaseModel):
+    email: str
+    code: str
+
+class ForgotPassword(BaseModel):
+    email: str
+    code_or_password: str
+
 class UserUpdate(BaseModel):
     avatar: Optional[str] = None
     phone_number: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    notify: Optional[bool] = None
+    device_token: Optional[str] = None
 
 class Login(BaseModel):
     email: str
@@ -58,6 +71,7 @@ class CreateOrder(BaseModel):
     card_number: Optional[str] = None
     note: Optional[str] = None
     adress: Optional[str] = None
+    status: Optional[str] = None
 
 # End Pydantic
 
@@ -71,13 +85,16 @@ class Users(Base):
     phone_number = Column(Text, nullable=True)
     avatar = Column(Text, nullable=True)
     email = Column(Text, nullable=False, unique=True)
-    password = Column(Text, nullable=False)
+    password = Column(Text, nullable=True)
     first_name = Column(Text, nullable=True)
     last_name = Column(Text, nullable=True)
     username = Column(Text, nullable=False, unique=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, default='now()')
     updated_at = Column(TIMESTAMP, default='now()')
+    device_token = Column(Text, nullable=True)
+    mail_code = Column(Integer, nullable=True)
+    notify = Column(Boolean, default=False)
 
 class Group(Base):
     __tablename__ = 'groups'
@@ -119,7 +136,7 @@ class Order(Base):
     assigned_user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     owner_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     folio = Column(Text, unique=True, nullable=False)
-    status = Column(Text, nullable=False, default='actived')
+    status = Column(Text, nullable=False, default='active')
     open = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, default='now()')
     amount = Column(Integer, nullable=False)
@@ -140,6 +157,7 @@ class UserRole(Base):
 
 # Conections methods
 from .config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
+# from config import DB_URL, SUPABASE_DB_NAME, SUPABASE_USER, SUPABASE_PASSWORD
 
 # Create URL connection for SQLAlchemy
 DATABASE_URL = f"postgresql://{SUPABASE_USER}:{SUPABASE_PASSWORD}@{DB_URL}/{SUPABASE_DB_NAME}"
@@ -203,7 +221,8 @@ def user_by_nickname(nickname) -> list:
         "username": user.username,
         "first_name": user.first_name,
         "last_name": user.last_name,
-        "avatar": user.avatar
+        "avatar": user.avatar,
+        "device_token": user.device_token
     }
 
     message = [True, user_data]
@@ -416,7 +435,7 @@ def user_group_list(user_id: int) -> list:
 
     for group in group_result:
         query = text(f"""
-        SELECT u.id, u.username, u.email, u.first_name, u.last_name, r.id AS role_id, r.name AS role_name
+        SELECT u.id, u.username, u.email, u.first_name, u.last_name, r.id AS role_id, r.name AS role_name, u.avatar
         FROM user_roles ur
         JOIN users u ON ur.user_id = u.id
         JOIN roles r ON ur.role_id = r.id
@@ -439,6 +458,7 @@ def user_group_list(user_id: int) -> list:
                 "username": user[1],
                 "first_name": user[3],
                 "last_name": user[4],
+                "avatar": user[7],
                 "role": role_obj
             }
             group_users_list.append(user_obj)
@@ -567,7 +587,81 @@ def order_create(new_order_data: CreateOrder) -> list:
     return message
 
 
-def order_update_executed (order_id: int) -> list:
+# def order_update_executed (order_id: int) -> list:
+#     message = []
+
+#     order = session.query(Order).filter(Order.id == order_id).first()
+#     if not order:
+#         message = [False, "The order does not exist", None]
+#         return message
+    
+#     # Update field status
+#     order.status = "executed"
+
+#     session.commit()
+#     session.refresh(order)
+#     session.close()
+
+#     order_object = {
+#         'id': order.id,
+#         'folio': order.folio,
+#         'owner_id': order.owner_id,
+#         'group_id': order.group_id,
+#         'product': {'id': order.product_id, 'name': get_product(order.product_id)},
+#         'user_id': order.assigned_user_id,
+#         'amount': order.amount,
+#         'client_phone_number': order.client_phone_number,
+#         'card_phone_number': order.card_phone_number,
+#         'card_number': order.card_num,
+#         'note': order.note,
+#         'adress': order.adress,
+#         'status': order.status,
+#         'open': order.open,
+#         'created_at': order.created_at
+#     }
+#     message = [True, "Order updated successfully", order_object]
+
+#     return message
+
+
+# def order_update_canceled (order_id: int) -> list:
+#     message = []
+
+#     order = session.query(Order).filter(Order.id == order_id).first()
+#     if not order:
+#         message = [False, "The order does not exist", None]
+#         return message
+    
+#     # Update field status
+#     order.status = "cancelled"
+
+#     session.commit()
+#     session.refresh(order)
+#     session.close()
+
+#     order_object = {
+#         'id': order.id,
+#         'folio': order.folio,
+#         'owner_id': order.owner_id,
+#         'group_id': order.group_id,
+#         'product': {'id': order.product_id, 'name': get_product(order.product_id)},
+#         'user_id': order.assigned_user_id,
+#         'amount': order.amount,
+#         'client_phone_number': order.client_phone_number,
+#         'card_phone_number': order.card_phone_number,
+#         'card_number': order.card_num,
+#         'note': order.note,
+#         'adress': order.adress,
+#         'status': order.status,
+#         'open': order.open,
+#         'created_at': order.created_at
+#     }
+#     message = [True, "Order updated successfully", order_object]
+
+#     return message
+
+
+def order_update (order_id: int, new_order_data: CreateOrder) -> list:
     message = []
 
     order = session.query(Order).filter(Order.id == order_id).first()
@@ -575,8 +669,18 @@ def order_update_executed (order_id: int) -> list:
         message = [False, "The order does not exist", None]
         return message
     
-    # Update field status
-    order.status = "executed"
+    # Update all fields
+    order.owner_id = new_order_data.owner_id
+    order.group_id = new_order_data.group_id
+    order.product_id = new_order_data.product_id
+    order.assigned_user_id = new_order_data.user_id
+    order.amount = new_order_data.amount
+    order.client_phone_number = new_order_data.client_phone_number
+    order.card_phone_number = new_order_data.card_phone_number
+    order.card_num = new_order_data.card_number
+    order.note = new_order_data.note
+    order.adress = new_order_data.adress
+    order.status = new_order_data.status
 
     session.commit()
     session.refresh(order)
@@ -587,7 +691,7 @@ def order_update_executed (order_id: int) -> list:
         'folio': order.folio,
         'owner_id': order.owner_id,
         'group_id': order.group_id,
-        'product': {'id': order.product_id, 'name': get_product(order.product_id)},
+        'product': {'id': order.product_id,'name': get_product(order.product_id)},
         'user_id': order.assigned_user_id,
         'amount': order.amount,
         'client_phone_number': order.client_phone_number,
@@ -603,45 +707,26 @@ def order_update_executed (order_id: int) -> list:
 
     return message
 
+def send_new_order_notification(user_id: int, order_folio: str, group_id: int, order_id: int):
+    from .notifications import send_push_notification
 
-def order_update_canceled (order_id: int) -> list:
-    message = []
-
-    order = session.query(Order).filter(Order.id == order_id).first()
-    if not order:
-        message = [False, "The order does not exist", None]
-        return message
-    
-    # Update field status
-    order.status = "cancelled"
-
-    session.commit()
-    session.refresh(order)
-    session.close()
-
-    order_object = {
-        'id': order.id,
-        'folio': order.folio,
-        'owner_id': order.owner_id,
-        'group_id': order.group_id,
-        'product': {'id': order.product_id, 'name': get_product(order.product_id)},
-        'user_id': order.assigned_user_id,
-        'amount': order.amount,
-        'client_phone_number': order.client_phone_number,
-        'card_phone_number': order.card_phone_number,
-        'card_number': order.card_num,
-        'note': order.note,
-        'adress': order.adress,
-        'status': order.status,
-        'open': order.open,
-        'created_at': order.created_at
+    device_token = session.query(Users.device_token).filter(Users.id == user_id).scalar()
+    notify = session.query(Users.notify).filter(Users.id == user_id).scalar()
+    title = "Tienes una nueva orden"
+    body = f"La orden número {order_folio} se le ha asignado. Revisa la aplicación para más detalles."
+    data = {
+        "action": "NUEVA_ORDEN_ASIGNADA",
+        "group_id": group_id,
+        "order_id": order_id
     }
-    message = [True, "Order updated successfully", order_object]
 
-    return message
+    if device_token and notify:
+        response = send_push_notification(device_token, title, body, data)
 
+        return response
+
+    return "Notification not send: No device token found or notifications disabled"
 
 
 if __name__ == "__main__":
-    response = users_roles()
-    print(response)
+    pass

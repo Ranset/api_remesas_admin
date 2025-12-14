@@ -50,6 +50,9 @@ def get_user_data(email: str) -> dict:
         "avatar": user_data.avatar, 
         "is_active": user_data.is_active,
         "updated_at": user_data.updated_at,
+        "notify": user_data.notify,
+        "device_token": user_data.device_token,
+        "mail_code": True if user_data.mail_code else False
         }
     
     return user_data
@@ -57,6 +60,13 @@ def get_user_data(email: str) -> dict:
 
 def authenticate_user(email: str, password: str):
     user = get_user(email)
+
+    if not user:
+        return None
+
+    if not user.password:
+        return None
+
     if user:
         if bcrypt.verify(password, user.password):
             return user
@@ -89,3 +99,31 @@ def get_token(api_key: str = Security(api_key_header)):
         return email
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization format")
+    
+
+def verify_code(user_email: str, code: str):
+    try:
+        user = session.query(Users).filter(Users.email == user_email).first()
+        if not user:
+            return (False, 'User not found')
+        
+        mail_code = str(user.mail_code)
+        
+        if mail_code[-4:] != code:
+            return (False, 'Invalid verification code')
+        
+        ts_str = mail_code[:-4]  # parte de timestamp YYYYMMDDhhmmss
+        code_dt = datetime.strptime(ts_str, "%Y%m%d%H%M%S")
+
+        # Verificar si el código ha expirado (más de 24 horas)
+        if datetime.now() - code_dt > timedelta(hours=24):
+            return (False, 'Verification code has expired')
+        
+    except Exception as e:
+        session.rollback()
+        return (False, str(e.__cause__))
+    
+    finally:
+        session.close()
+
+    return (True, 'Code verified successfully')
