@@ -60,7 +60,7 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.8.2"
+app.version = "0.8.3"
 
 # Middleware implementation for CORS mannager
 origins = [
@@ -82,7 +82,7 @@ app.add_middleware(
     )
 
 
-# Enddpoint de registro de usuario
+# Endpoint de registro de usuario
 @app.post("/api/auth/register", tags=["auth"], response_model=ResponseContract)
 async def register(user: User):
     try:
@@ -120,7 +120,7 @@ async def register(user: User):
     finally:
         session.close()
 
-#Ebdpoint reenviar código de verificación
+#Endpoint reenviar código de verificación
 @app.post("/api/auth/resend_verification_code", response_model=ResponseContract, tags=["auth"])
 async def resend_verification_code(email: Email):
     try:

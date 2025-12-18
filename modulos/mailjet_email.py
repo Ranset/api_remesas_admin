@@ -7,6 +7,7 @@ class MailjetEmail:
 
         self.api_key = os.environ.get('MJ_APIKEY_PUBLIC')
         self.api_secret = os.environ.get('MJ_APIKEY_PRIVATE')
+        self.sender_mail = "remesas.aplication@gmail.com"
 
     def send_email_verify(self, code, client_email, client_name):
         """
@@ -30,7 +31,7 @@ class MailjetEmail:
             'Messages': [
                 {
                     "From": {
-                        "Email": "ransetfleites0@gmail.com", 
+                        "Email": self.sender_mail, 
                         "Name": "Remesas Admin"
                         },
                     "To": [
@@ -71,7 +72,7 @@ class MailjetEmail:
             'Messages': [
                 {
                     "From": {
-                        "Email": "ransetfleites0@gmail.com", 
+                        "Email": self.sender_mail, 
                         "Name": "Remesas Admin"
                         },
                     "To": [
@@ -158,7 +159,7 @@ class MailjetEmail:
             'Messages': [
                 {
                     "From": {
-                        "Email": "ransetfleites0@gmail.com", 
+                        "Email": self.sender_mail, 
                         "Name": "Remesas Admin"
                         },
                     "To": [
@@ -205,7 +206,7 @@ class MailjetEmail:
             'Messages': [
                 {
                     "From": {
-                        "Email": "ransetfleites0@gmail.com", 
+                        "Email": self.sender_mail, 
                         "Name": "Remesas Admin"
                         },
                     "To": [
@@ -226,7 +227,3 @@ class MailjetEmail:
 
         result = mailjet.send.create(data=data)
         print(result.status_code)
-
-
-
-                        
