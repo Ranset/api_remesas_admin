@@ -60,7 +60,7 @@ tags_metadata = [
 # Crear una instancia de la aplicación FastAPI
 app = FastAPI(openapi_tags=tags_metadata)
 app.title = "Remesas admin"
-app.version = "0.8.3"
+app.version = "0.8.4"
 
 # Middleware implementation for CORS mannager
 origins = [
@@ -121,40 +121,42 @@ async def register(user: User):
         session.close()
 
 #Endpoint reenviar código de verificación
-@app.post("/api/auth/resend_verification_code", response_model=ResponseContract, tags=["auth"])
-async def resend_verification_code(email: Email):
-    try:
-        code = DateUtlility().generar_codigo()
+# @app.post("/api/auth/resend_verification_code", response_model=ResponseContract, tags=["auth"])
+# async def resend_verification_code(email: Email):
+#     try:
 
-        user_data = get_user(email.email)
-        user_data = {
-            "id": user_data.id, 
-            "email": user_data.email, 
-            "username": user_data.username,
-            "is_active": user_data.is_active,
-            "updated_at": user_data.updated_at,
-            "mail_code": True if user_data.mail_code else False
-            }
-        
-        email_code = MailjetEmail()
-        email_code.send_email_verify(code[-4:], user_data["email"], user_data["username"])  # Send only the last 4 digits as code, email and username
+#         user_data = get_user(email.email)
 
-        return ResponseContract(
-            sucess= True,
-            data= {
-                'message': 'Verification code resent successfully'
-            }
-        )
-    except Exception as e:
-        session.rollback()
-        return ResponseContract(
-            sucess= False,
-            data= {
-                'error': str(e.__cause__)
-            }
-        )
-    finally:
-        session.close()
+#         code = user_data.mail_code
+
+#         user_data = {
+#             "id": user_data.id, 
+#             "email": user_data.email, 
+#             "username": user_data.username,
+#             "is_active": user_data.is_active,
+#             "updated_at": user_data.updated_at,
+#             "mail_code": True if user_data.mail_code else False
+#             }
+
+#         email_code = MailjetEmail()
+#         email_code.send_email_verify(code[-4:], user_data["email"], user_data["username"])  # Send only the last 4 digits as code, email and username
+
+#         return ResponseContract(
+#             sucess= True,
+#             data= {
+#                 'message': 'Verification code resent successfully'
+#             }
+#         )
+#     except Exception as e:
+#         session.rollback()
+#         return ResponseContract(
+#             sucess= False,
+#             data= {
+#                 'error': str(e.__cause__)
+#             }
+#         )
+#     finally:
+#         session.close()
 
 #Endpoint para verificar el código de usuario
 @app.post("/api/auth/verify_email", response_model=ResponseContract, tags=["auth"])
@@ -198,6 +200,7 @@ async def forgot_password(forgot: ForgotPassword):
         user = session.query(Users).filter(Users.email == forgot.email).first()
         if user:
             user.password = bcrypt.hash(forgot.code_or_password)
+            user.is_active = True
             session.commit()
             session.refresh(user)  # Refresca el objeto para asegurar que se guardó
 

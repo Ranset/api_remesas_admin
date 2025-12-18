@@ -26,29 +26,33 @@ class MailjetEmail:
         if not self.api_key or not self.api_secret:
             raise RuntimeError("Faltan variables de entorno MJ_APIKEY_PUBLIC/MJ_APIKEY_PRIVATE")
 
-        mailjet = Client(auth=(self.api_key, self.api_secret), version='v3.1')
-        data = {
-            'Messages': [
-                {
-                    "From": {
-                        "Email": self.sender_mail, 
-                        "Name": "Remesas Admin"
-                        },
-                    "To": [
-                        {
-                            "Email": f"{client_email}", 
-                            "Name": f"{client_name}"
-                        }
-                        ],
-                    "Subject": "Registro en Remesas Admin - Verificación de correo",
-                    "TextPart": "Gracias por registrarte en Remesas Admin. Por favor, verifica tu correo con el siguiente código en la aplicación: " + code,
-                    "HTMLPart": f'<h4>&iexcl;Hola!</h4> <p>Gracias por registrarte en Remesas Admin. Por favor, <span class="il">verifica</span> tu correo con el siguiente c&oacute;digo en la aplicaci&oacute;n:</p><h1 style="text-align: center;"><strong>{code}</strong></h1><p>Si usted no ha solicitado crearse una cuenta, ignore este correo.</p><p>Saludos,<br />Equipo de Remesas Admin</p>'
-                }
-            ]
-        }
-        result = mailjet.send.create(data=data)
-        print(result.status_code)
-        print(result.json())
+        try:
+            mailjet = Client(auth=(self.api_key, self.api_secret), version='v3.1')
+            data = {
+                'Messages': [
+                    {
+                        "From": {
+                            "Email": self.sender_mail, 
+                            "Name": "Remesas Admin"
+                            },
+                        "To": [
+                            {
+                                "Email": f"{client_email}", 
+                                "Name": f"{client_name}"
+                            }
+                            ],
+                        "Subject": "Registro en Remesas Admin - Verificación de correo",
+                        "TextPart": "Por favor, verifica tu correo con el siguiente código en la aplicación: " + code,
+                        "HTMLPart": f'<h4>&iexcl;Hola!</h4> <p>Por favor, <span class="il">verifica</span> tu correo con el siguiente c&oacute;digo en la aplicaci&oacute;n:</p><h1 style="text-align: center;"><strong>{code}</strong></h1><p>Si usted no ha solicitado crearse una cuenta, ignore este correo.</p><p>Saludos,<br />Equipo de Remesas Admin</p>'
+                    }
+                ]
+            }
+            result = mailjet.send.create(data=data)
+            print(result.status_code)
+            print(result.json())
+
+        except Exception as e:
+            print(f"Error al enviar el correo: {e}")
 
     def send_email_welcome(self, client_email, client_name):
         """
