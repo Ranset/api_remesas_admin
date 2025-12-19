@@ -231,3 +231,7 @@ class MailjetEmail:
 
         result = mailjet.send.create(data=data)
         print(result.status_code)
+
+if __name__ == "__main__":
+    email_sender = MailjetEmail()
+    email_sender.send_email_verify(str(1234), "ranolishop@gmail.com", "Ranoli")
